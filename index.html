@@ -19,13 +19,19 @@
   .tfbar{display:flex;gap:6px;padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
   .tfbar button{min-width:56px;padding:9px 16px;font-size:14px;font-weight:600;color:var(--mute);background:var(--panel)}
   .tfbar button.on{background:var(--acc);border-color:var(--acc);color:#000}
-  details{background:var(--panel);border-bottom:1px solid var(--line);padding:6px 14px}
-  summary{cursor:pointer;color:var(--acc);font-size:13px}
-  .grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+  .layout{display:flex;align-items:flex-start}
+  #cfg{flex:0 0 280px;width:280px;position:sticky;top:0;max-height:100vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--panel);border-right:1px solid var(--line);padding:8px 10px}
+  #cfg.hide{display:none}
+  #cfg h2{margin:2px 0 8px;font-size:13px;color:var(--acc)}
+  .grid{display:flex;flex-direction:column;gap:8px}
+  #cfg fieldset{flex-direction:column;align-items:stretch;gap:6px;margin:0}
+  #cfg label{display:flex;align-items:center;gap:8px;white-space:normal}
+  #cfg input[type=number],#cfg select{margin-left:auto}
+  @media(max-width:800px){.layout{flex-direction:column}#cfg{flex:none;width:100%;position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}}
   fieldset{border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   legend{color:var(--acc);font-size:12px;padding:0 4px}
   fieldset input[type=number]{width:62px}
-  .wrap{padding:8px 10px}
+  .wrap{padding:8px 10px;flex:1;min-width:0;width:100%}
   .pane{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:6px}
   .tag{position:absolute;left:10px;top:6px;z-index:5;font-size:12px;color:var(--mute);pointer-events:none}
   #main{height:50vh}#harsi{height:32vh}
@@ -40,6 +46,7 @@
 <body>
 <header>
   <h1 id="ttl">XAUUSD</h1>
+  <button id="cfgBtn" title="Tampilkan / sembunyikan pengaturan">☰ Pengaturan</button>
   <label>Sumber
     <select id="src">
       <option value="biquote">biquote (gratis, tanpa key, forex + emas spot)</option>
@@ -54,7 +61,8 @@
 <div class="tfbar" id="tfs"><input type="hidden" id="tf" value="1h">
   <button data-tf="1m">1m</button><button data-tf="5m">5m</button><button data-tf="15m">15m</button><button data-tf="30m">30m</button><button data-tf="1h" class="on">1h</button><button data-tf="4h">4h</button><button data-tf="1d">1d</button>
 </div>
-<details id="cfg" open><summary>Pengaturan indikator</summary>
+<div class="layout">
+<aside id="cfg"><h2>Pengaturan indikator</h2>
 <div class="grid">
   <fieldset><legend>UT Bot</legend>
     <label><input id="utOn" type="checkbox" checked> Sinyal</label>
@@ -136,11 +144,12 @@
     <label><input id="tbT" type="checkbox" checked> TF di kolom (seperti skrip Pine)</label>
   </fieldset>
 </div>
-</details>
+</aside>
 <div class="wrap">
   <div class="pane"><div class="tag" id="t0">Harga</div><div id="main"></div><div id="cd"></div><div id="mtf"></div></div>
   <div class="pane"><div class="tag" id="t1">HARSI</div><div id="harsi"></div></div>
   <div class="note">biquote mengambil harga dari feed MetaTrader 5 sebuah broker, jadi bisa sedikit berbeda dari TradingView. Simbol berlaku untuk biquote dan Twelve Data; Binance selalu PAXG/USDT (token emas). Candle mingguan di biquote dihitung dari candle harian. Marker pola candle hanya untuk candle yang sudah tutup: biru muda = bullish, merah muda = bearish, abu-abu = netral. Di tabel: Candle Run = candle yang sedang berjalan, Candle Cls = candle sebelumnya yang sudah tutup (hijau bullish, merah bearish, oranye netral). Bukan saran investasi.</div>
+</div>
 </div>
 
 <script>
@@ -803,6 +812,8 @@ document.querySelectorAll('#tfs button').forEach(b=>b.onclick=()=>{
   trig();
 });
 checkSymbols();
+if(window.innerWidth<900) $('cfg').classList.add('hide');
+$('cfgBtn').onclick=()=>{ $('cfg').classList.toggle('hide'); setTimeout(placeCd,300); };
 try{ $('key').value=localStorage.getItem('xau_key')||''; }catch(e){}
 loadData();
 setInterval(tickCd,1000);
