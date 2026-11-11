@@ -124,6 +124,13 @@
     <label>Shadow x <input id="cpShadow" type="number" step="0.1" value="2"></label>
     <label>Tweezer % <input id="cpTol" type="number" value="5"></label>
   </fieldset>
+  <fieldset><legend>Support &amp; Resistance</legend>
+    <label><input id="srOn" type="checkbox" checked> Tampil</label>
+    <label>Jumlah per sisi <input id="srN" type="number" value="3"></label>
+    <label>Pivot (bar kiri/kanan) <input id="srPv" type="number" value="5"></label>
+    <label>Min sentuhan <input id="srMin" type="number" value="2"></label>
+    <label>Toleransi x ATR <input id="srTol" type="number" step="0.1" value="0.5"></label>
+  </fieldset>
   <fieldset><legend>Tabel MTF</legend>
     <label><input id="tbOn" type="checkbox" checked> Tampil (biquote &amp; Binance)</label>
     <label><input id="tbT" type="checkbox" checked> TF di kolom (seperti skrip Pine)</label>
@@ -232,7 +239,7 @@ charts.forEach(c=>c.timeScale().subscribeVisibleLogicalRangeChange(r=>{
 // ---------- indikator ----------
 const N=id=>+$(id).value, K=id=>$(id).checked;
 const cfg=()=>({utOn:K('utOn'),ua:N('ua'),uc:N('uc'),ha:K('ha'),sr:N('sr'),sl:N('sl'),sk:N('sk'),sd:N('sd'),rl:N('rl'),
-  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),cdOn:K('cdOn'),cdAll:K('cdAll'),mkOn:K('mkOn'),tbT:K('tbT'),cpTr:K('cpTr'),cpEma:Math.max(2,N('cpEma')),cpDoji:N('cpDoji')/100,cpSmall:N('cpSmall')/100,cpLong:N('cpLong'),cpShadow:N('cpShadow'),cpTol:N('cpTol')/100,
+  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),srOn:K('srOn'),srN:Math.max(1,N('srN')),srPv:Math.max(2,N('srPv')),srMin:Math.max(1,N('srMin')),srTol:N('srTol'),cdOn:K('cdOn'),cdAll:K('cdAll'),mkOn:K('mkOn'),tbT:K('tbT'),cpTr:K('cpTr'),cpEma:Math.max(2,N('cpEma')),cpDoji:N('cpDoji')/100,cpSmall:N('cpSmall')/100,cpLong:N('cpLong'),cpShadow:N('cpShadow'),cpTol:N('cpTol')/100,
   hLen:N('hLen'),hSm:Math.max(1,N('hSm')),hRL:N('hRL'),hMode:K('hMode'),hPlot:K('hPlot'),hHist:K('hHist'),
   xShow:K('xShow'),xRsi:N('xRsi'),xSto:N('xSto'),xK:N('xK'),xD:N('xD'),xOB:N('xOB'),xOS:N('xOS'),xSc:N('xSc'),xSig:K('xSig'),xZone:K('xZone'),
   lOB:N('lOB'),lOBx:N('lOBx'),lOS:N('lOS'),lOSx:N('lOSx')});
@@ -335,6 +342,44 @@ function supertrend(d,f,n){
   return dir;
 }
 const toSeries=(t,a)=>t.map((x,i)=>a[i]==null?{time:x}:{time:x,value:a[i]});
+
+// ---------- Support & Resistance terdekat (pivot swing yang digabung per zona) ----------
+let srLines=[], srKey='';
+function calcSR(d,S){
+  const n=d.length, L=S.srPv, piv=[];
+  for(let i=L;i<n-L;i++){
+    let hh=true, ll=true;
+    for(let j=i-L;j<=i+L;j++){
+      if(j===i) continue;
+      if(d[j].high>d[i].high) hh=false;
+      if(d[j].low<d[i].low) ll=false;
+      if(!hh&&!ll) break;
+    }
+    if(hh) piv.push(d[i].high);
+    if(ll) piv.push(d[i].low);
+  }
+  const a=atr(d,14), A=a[n-1]!=null?a[n-1]:(d[n-1].high-d[n-1].low);
+  const tol=Math.max(A*S.srTol,d[n-1].close*0.0001);
+  piv.sort((x,y)=>x-y);
+  const cl=[];
+  piv.forEach(p=>{
+    const c=cl[cl.length-1];
+    if(c&&Math.abs(p-c.sum/c.cnt)<=tol){ c.sum+=p; c.cnt++; } else cl.push({sum:p,cnt:1});
+  });
+  return cl.filter(c=>c.cnt>=S.srMin).map(c=>({p:c.sum/c.cnt,n:c.cnt}));
+}
+function clearSR(){ srLines.forEach(l=>{ try{candle.removePriceLine(l);}catch(e){} }); srLines=[]; srKey=''; }
+function drawSR(S,price){
+  if(!S.srOn||!cache.sr){ clearSR(); return; }
+  const res=cache.sr.filter(l=>l.p>price).sort((a,b)=>a.p-b.p).slice(0,S.srN);
+  const sup=cache.sr.filter(l=>l.p<price).sort((a,b)=>b.p-a.p).slice(0,S.srN);
+  const key=res.map(l=>l.p.toFixed(5)).join()+'|'+sup.map(l=>l.p.toFixed(5)).join();
+  if(key===srKey) return;
+  clearSR(); srKey=key;
+  const mk=(l,i,c,t)=>srLines.push(candle.createPriceLine({price:l.p,color:c,lineWidth:1,lineStyle:2,axisLabelVisible:true,title:t+(i+1)+' ('+l.n+'x)'}));
+  res.forEach((l,i)=>mk(l,i,'#ef5350','R'));
+  sup.forEach((l,i)=>mk(l,i,'#26a69a','S'));
+}
 
 // ---------- deteksi pola candle (port dari f_detect di skrip Pine) ----------
 function cpCtx(d,S){
@@ -546,6 +591,8 @@ function render(live){
     }
     mk.sort((a,b)=>a.time-b.time);
     candle.setMarkers(mk);
+    if(!live||!cache.sr) cache.sr=calcSR(d,S);
+    drawSR(S,d[d.length-1].close);
 
     const mid=sma(c,S.bl), sdv=stdev(c,S.bl);
     bbM.setData(toSeries(t,mid));
