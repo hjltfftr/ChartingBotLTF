@@ -15,7 +15,7 @@
   button{cursor:pointer}button:hover{border-color:var(--acc)}
   label{color:var(--mute);font-size:12px;white-space:nowrap}
   #ws{margin-left:auto;font-size:12px;color:var(--mute)}
-  #status{color:var(--mute);font-size:12px}
+  #status{color:var(--mute);font-size:12px;flex:1 1 280px;min-width:0;text-align:right}
   .tfbar{display:flex;gap:6px;padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
   .tfbar button{min-width:56px;padding:9px 16px;font-size:14px;font-weight:600;color:var(--mute);background:var(--panel)}
   .tfbar button.on{background:var(--acc);border-color:var(--acc);color:#000}
@@ -26,7 +26,7 @@
   .grid{display:flex;flex-direction:column;gap:8px}
   #cfg fieldset{flex-direction:column;align-items:stretch;gap:6px;margin:0}
   #cfg label{display:flex;align-items:center;gap:8px;white-space:normal}
-  #cfg input[type=number],#cfg select{margin-left:auto}
+  #cfg input[type=number],#cfg input[type=text],#cfg select{margin-left:auto}
   @media(max-width:900px){.wrap{flex-direction:column}.side{width:100%;max-width:none;position:static;max-height:none}}
   @media(max-width:800px){.layout{flex-direction:column}#cfg{flex:none;width:100%;position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}}
   fieldset{border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -34,7 +34,7 @@
   fieldset input[type=number]{width:62px}
   .wrap{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;flex:1;min-width:0;width:100%}
   .charts{flex:1;min-width:0}
-  .side{flex:0 0 auto;width:max-content;max-width:470px;display:flex;flex-direction:column;gap:10px;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto}
+  .side{flex:0 0 clamp(300px,30vw,470px);width:clamp(300px,30vw,470px);display:flex;flex-direction:column;gap:10px;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto}
   .side.hide{display:none}
   .pane{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:6px}
   .tag{position:absolute;left:10px;top:6px;z-index:5;font-size:12px;color:var(--mute);pointer-events:none}
@@ -158,6 +158,9 @@
     <label><input id="hpRN" type="checkbox" checked> Angka rasio di tiap leg</label>
     <label><input id="hpTrade" type="checkbox" checked> Kotak trade (BUY/SELL, STOP, TP1/TP2)</label>
     <label>Jumlah kotak trade <input id="hpTN" type="number" value="2"></label>
+    <label>Target Fibonacci (D ke A) <input id="hpFib" type="text" value="0.382,0.618" style="width:120px"></label>
+    <label><input id="hpTC" type="checkbox" checked> Kotak trade juga untuk pola confirmed terbaru</label>
+    <label><input id="hpTA" type="checkbox" checked> ...tampilkan walau target sudah tercapai (ditandai ✓)</label>
     <label>ZZ ATR x <input id="hpZm" type="number" step="0.1" value="2"></label>
     <label>ZZ ATR period <input id="hpZp" type="number" value="50"></label>
     <label>ZZ max period <input id="hpZmax" type="number" value="20"></label>
@@ -302,7 +305,7 @@ charts.forEach(c=>c.timeScale().subscribeVisibleLogicalRangeChange(r=>{
 // ---------- indikator ----------
 const N=id=>+$(id).value, K=id=>$(id).checked;
 const cfg=()=>({utOn:K('utOn'),ua:N('ua'),uc:N('uc'),ha:K('ha'),sr:N('sr'),sl:N('sl'),sk:N('sk'),sd:N('sd'),rl:N('rl'),
-  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),hpOn:K('hpOn'),hpTb:K('hpTb'),hpOld:K('hpOld'),hpEm:K('hpEm'),hpAh:K('hpAh'),hpSoft:K('hpSoft'),hpRatio:K('hpRatio'),hpLine:K('hpLine'),hpBox:K('hpBox'),hpFill:K('hpFill'),hpRN:K('hpRN'),hpTrade:K('hpTrade'),hpTN:Math.max(0,N('hpTN')),
+  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),hpOn:K('hpOn'),hpTb:K('hpTb'),hpOld:K('hpOld'),hpEm:K('hpEm'),hpAh:K('hpAh'),hpSoft:K('hpSoft'),hpRatio:K('hpRatio'),hpLine:K('hpLine'),hpBox:K('hpBox'),hpFill:K('hpFill'),hpRN:K('hpRN'),hpTrade:K('hpTrade'),hpTN:Math.max(0,N('hpTN')),hpTC:K('hpTC'),hpTA:K('hpTA'),hpFib:(()=>{const a=(($('hpFib').value||'').split(/[,; ]+/).map(Number).filter(v=>v>0&&isFinite(v)).sort((x,y)=>x-y).filter((v,i,r)=>!i||v!==r[i-1]).slice(0,6));return a.length?a:[0.382,0.618];})(),
   hpZm:N('hpZm'),hpZp:N('hpZp'),hpZmax:N('hpZmax'),hpZmin:N('hpZmin'),hpZrt:K('hpZrt'),hpSlR:N('hpSlR'),hpSlU:N('hpSlU'),hpPur:K('hpPur'),hpLeg:K('hpLeg'),hpDd:K('hpDd'),
   hpMaxC:Math.max(1,N('hpMaxC')),hpMaxE:Math.max(1,N('hpMaxE')),hpExt:Math.max(5,N('hpExt')),hpPat:[0,1,2,3,4,5,6,7].map(i=>K('hpP'+i)),
   srOn:K('srOn'),srN:Math.max(1,N('srN')),srPv:Math.max(2,N('srPv')),srMin:Math.max(1,N('srMin')),srTol:N('srTol'),cdOn:K('cdOn'),cdAll:K('cdAll'),mkOn:K('mkOn'),tbT:K('tbT'),cpTr:K('cpTr'),cpEma:Math.max(2,N('cpEma')),cpDoji:N('cpDoji')/100,cpSmall:N('cpSmall')/100,cpLong:N('cpLong'),cpShadow:N('cpShadow'),cpTol:N('cpTol')/100,
@@ -761,7 +764,7 @@ function hProcess(P,pat,raw,rawU,rawO,lpa,lta,endsT,conf,trans,proj,ahead,over){
 // ----- gambar -----
 const HP_BLUE='#87cefa', HP_PINK='#ffb6c1', HP_GREEN='#2e8b57', HP_ORANGE='#ff8c00';
 function hRgba(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
-function hDraw(S,m,state,out,tk){
+function hDraw(S,m,state,out,tk,cx){
   const pat=HP_PATS[m.pi], proj=state>=2, ext=S.hpExt;
   const raw=proj?(m.bull?HP_GREEN:HP_ORANGE):(m.bull?HP_BLUE:HP_PINK);
   const main=proj?(S.hpSoft?hRgba(raw,.22):raw):raw;
@@ -798,16 +801,25 @@ function hDraw(S,m,state,out,tk){
     out.push({t:'b',i1:m.di-1,top,i2:m.di+ext,bot,bc:hRgba(raw,.45),fc:hRgba(raw,.12),txt:'PRZ '+pat.name,tc:raw});
     T(m.di+ext,top,fp(top),raw); T(m.di+ext,bot,fp(bot),raw);   // label harga batas atas dan bawah PRZ
   } else if(S.hpLine) T(m.di+ext,prz,fp(prz),raw);
-  // kotak trade: entry di PRZ, STOP sedikit di luar sisi jauh PRZ, TP1/TP2 = 0,382 / 0,618 dari A ke D
-  if(S.hpTrade&&state>=1&&state<=2&&tk&&tk()){
-    const dir=m.bull?1:-1, ref=proj?(m.nearD+m.farD)/2:m.d, AD=Math.abs(m.a-ref);
-    const t1=ref+.382*(m.a-ref), t2=ref+.618*(m.a-ref), stop=m.farD-dir*.1*AD, x1=m.di, x2=m.di+ext;
-    out.push({t:'b',i1:x1,top:Math.max(ref,t2),i2:x2,bot:Math.min(ref,t2),bc:'rgba(0,0,0,0)',fc:'rgba(38,166,154,.22)',txt:''});
-    out.push({t:'b',i1:x1,top:Math.max(ref,stop),i2:x2,bot:Math.min(ref,stop),bc:'rgba(0,0,0,0)',fc:'rgba(239,83,80,.22)',txt:''});
-    const lv=(p,s,c)=>{ L(x1,p,x2,p,c,[],1); T(x2,p,s+' '+fp(p),c); };
-    lv(t1,'TP1','#26a69a'); lv(t2,'TP2','#26a69a'); lv(stop,'STOP','#ef5350');
-    out.push({t:'r',i:x1,p:ref,s:m.bull?'BUY':'SELL',c:m.bull?'#26a69a':'#ef5350',fill:true});
-    out.push({t:'a',i1:x1+ext*.15,p1:ref,i2:x1+ext*.7,p2:t1,c:'#eceff1'});
+  // kotak trade: entry di PRZ, target = level Fibonacci dari D ke A, STOP 10% dari AD di luar sisi jauh PRZ
+  if(S.hpTrade&&state<=2){
+    const dir=m.bull?1:-1, ref=proj?(m.nearD+m.farD)/2:m.d, AD=Math.abs(m.a-ref), px=cx.px;
+    const tp=S.hpFib.map(r=>({r,p:ref+r*(m.a-ref)})), stop=m.farD-dir*.1*AD, first=tp[0];
+    let ok=false;
+    if(state===0) ok=S.hpTC&&(S.hpTA||(m.bull?(px<first.p&&px>stop):(px>first.p&&px<stop)))&&tk(0);
+    else ok=tk(1);
+    if(ok){
+      const x1=m.di, x2=state===0?Math.max(m.di+ext,cx.cur+Math.round(ext/3)):m.di+ext, far=tp[tp.length-1].p;
+      out.push({t:'b',i1:x1,top:Math.max(ref,far),i2:x2,bot:Math.min(ref,far),bc:'rgba(0,0,0,0)',fc:'rgba(38,166,154,.20)',txt:''});
+      out.push({t:'b',i1:x1,top:Math.max(ref,stop),i2:x2,bot:Math.min(ref,stop),bc:'rgba(0,0,0,0)',fc:'rgba(239,83,80,.20)',txt:''});
+      const lv=(p,s,c)=>{ L(x1,p,x2,p,c,[],1); T(x2,p,s+' '+fp(p),c); };
+      // tandai target yang sudah tersentuh sejak D, dan STOP yang sudah tersentuh
+      const reached=(p,up)=>{ for(let i=m.di+1;i<=cx.cur;i++){ if(up?cx.d[i].high>=p:cx.d[i].low<=p) return true; } return false; };
+      tp.forEach((q,k)=>lv(q.p,'TP'+(k+1)+' '+String(+q.r.toFixed(3))+(state===0&&reached(q.p,m.bull)?' ✓':''),'#26a69a'));
+      lv(stop,'STOP'+(state===0&&reached(stop,!m.bull)?' ✗':''),'#ef5350');
+      out.push({t:'r',i:x1,p:ref,s:m.bull?'BUY':'SELL',c:m.bull?'#26a69a':'#ef5350',fill:true});
+      out.push({t:'a',i1:x1+ext*.15,p1:ref,i2:x1+ext*.7,p2:first.p,c:'#eceff1'});
+    }
   }
 }
 function hDash(conf,trans,proj,over){
@@ -851,10 +863,10 @@ function hCompute(d,S){
   [conf,trans,proj,ahead,over].forEach(a=>a.sort((x,y)=>y.di-x.di));
   const html=hDash(conf,trans,proj,over);
   const items=[], trim=(a,k)=>{ while(a.length>k) a.pop(); };
-  let tradeLeft=S.hpTN; const tk=()=>tradeLeft-->0;
-  if(S.hpOld){ trim(conf,S.hpMaxC); conf.forEach(m=>hDraw(S,m,0,items)); }
-  if(S.hpEm){ trim(trans,S.hpMaxE); trim(proj,S.hpMaxE); trans.forEach(m=>hDraw(S,m,1,items,tk)); proj.forEach(m=>hDraw(S,m,2,items,tk)); }
-  if(S.hpAh){ trim(ahead,S.hpMaxE); ahead.forEach(m=>hDraw(S,m,3,items)); }
+  let tradeLeft=S.hpTN, confLeft=1; const tk=k=>k===0?confLeft-->0:tradeLeft-->0, cx={px:d[n-1].close,cur:n-1,d};
+  if(S.hpOld){ trim(conf,S.hpMaxC); conf.forEach(m=>hDraw(S,m,0,items,tk,cx)); }
+  if(S.hpEm){ trim(trans,S.hpMaxE); trim(proj,S.hpMaxE); trans.forEach(m=>hDraw(S,m,1,items,tk,cx)); proj.forEach(m=>hDraw(S,m,2,items,tk,cx)); }
+  if(S.hpAh){ trim(ahead,S.hpMaxE); ahead.forEach(m=>hDraw(S,m,3,items,tk,cx)); }
   return {items,html,counts:{conf:conf.length,trans:trans.length,proj:proj.length,ahead:ahead.length,over:over.length}};
 }
 // ---------- kanvas overlay ----------
