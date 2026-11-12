@@ -27,17 +27,28 @@
   #cfg fieldset{flex-direction:column;align-items:stretch;gap:6px;margin:0}
   #cfg label{display:flex;align-items:center;gap:8px;white-space:normal}
   #cfg input[type=number],#cfg select{margin-left:auto}
+  @media(max-width:900px){.wrap{flex-direction:column}.side{width:100%;max-width:none;position:static;max-height:none}}
   @media(max-width:800px){.layout{flex-direction:column}#cfg{flex:none;width:100%;position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}}
   fieldset{border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   legend{color:var(--acc);font-size:12px;padding:0 4px}
   fieldset input[type=number]{width:62px}
-  .wrap{padding:8px 10px;flex:1;min-width:0;width:100%}
+  .wrap{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;flex:1;min-width:0;width:100%}
+  .charts{flex:1;min-width:0}
+  .side{flex:0 0 auto;width:max-content;max-width:470px;display:flex;flex-direction:column;gap:10px;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto}
+  .side.hide{display:none}
   .pane{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:6px}
   .tag{position:absolute;left:10px;top:6px;z-index:5;font-size:12px;color:var(--mute);pointer-events:none}
   #main{height:50vh}#harsi{height:32vh}
   #cd{position:absolute;right:1px;top:0;z-index:6;pointer-events:none;display:none;text-align:center;padding:2px 0;border-radius:2px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:#fff}
-  #mtf{position:absolute;right:62px;bottom:34px;z-index:6;pointer-events:none}
-  #mtf table{border-collapse:collapse;font-size:10px}
+  #hpc{position:absolute;left:0;top:0;pointer-events:none;z-index:4}
+  .tbox{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:100%;overflow-x:auto}
+  .tbox h3{margin:0 0 6px;font-size:12px;color:var(--acc)}
+  #hpd:empty::before{content:'Belum ada pola harmonik terdeteksi';color:var(--mute);font-size:12px}
+  #mtf:empty::before{content:'Tabel MTF belum tersedia (hanya untuk sumber biquote dan Binance)';color:var(--mute);font-size:12px}
+  #hpd table{border-collapse:collapse;font-size:11px}
+  #hpd th,#hpd td{border:1px solid rgba(120,123,134,.4);padding:2px 6px;white-space:nowrap}
+  #hpd th{background:rgba(120,123,134,.6);color:#fff}
+  #mtf table{border-collapse:collapse;font-size:11px}
   #mtf th,#mtf td{white-space:nowrap;line-height:1.25;border:1px solid #0f1318;padding:2px 6px;text-align:center;color:#fff}
   #mtf th{background:#4b5260}
   .note{color:var(--mute);font-size:12px;padding:2px 4px}
@@ -47,6 +58,7 @@
 <header>
   <h1 id="ttl">XAUUSD</h1>
   <button id="cfgBtn" title="Tampilkan / sembunyikan pengaturan">☰ Pengaturan</button>
+  <button id="sideBtn" title="Tampilkan / sembunyikan tabel di kanan">▤ Tabel</button>
   <label>Sumber
     <select id="src">
       <option value="biquote">biquote (gratis, tanpa key, forex + emas spot)</option>
@@ -132,6 +144,42 @@
     <label>Shadow x <input id="cpShadow" type="number" step="0.1" value="2"></label>
     <label>Tweezer % <input id="cpTol" type="number" value="5"></label>
   </fieldset>
+  <fieldset><legend>Harmonic Pattern</legend>
+    <label><input id="hpOn" type="checkbox" checked> Tampil</label>
+    <label><input id="hpTb" type="checkbox" checked> Dashboard (kanan atas)</label>
+    <label><input id="hpOld" type="checkbox" checked> Pola lampau (confirmed)</label>
+    <label><input id="hpEm" type="checkbox" checked> Emerging &amp; proyeksi</label>
+    <label><input id="hpAh" type="checkbox"> Proyeksi one-ahead</label>
+    <label><input id="hpSoft" type="checkbox" checked> Proyeksi warna lembut</label>
+    <label><input id="hpRatio" type="checkbox" checked> Garis rasio</label>
+    <label><input id="hpLine" type="checkbox" checked> Garis PRZ</label>
+    <label><input id="hpBox" type="checkbox" checked> Kotak PRZ</label>
+    <label><input id="hpFill" type="checkbox" checked> Isi warna segitiga</label>
+    <label><input id="hpRN" type="checkbox" checked> Angka rasio di tiap leg</label>
+    <label><input id="hpTrade" type="checkbox" checked> Kotak trade (BUY/SELL, STOP, TP1/TP2)</label>
+    <label>Jumlah kotak trade <input id="hpTN" type="number" value="2"></label>
+    <label>ZZ ATR x <input id="hpZm" type="number" step="0.1" value="2"></label>
+    <label>ZZ ATR period <input id="hpZp" type="number" value="50"></label>
+    <label>ZZ max period <input id="hpZmax" type="number" value="20"></label>
+    <label>ZZ min period <input id="hpZmin" type="number" value="3"></label>
+    <label><input id="hpZrt" type="checkbox" checked> ZZ realtime</label>
+    <label>Slack rasio (range) <input id="hpSlR" type="number" step="0.005" value="0.10"></label>
+    <label>Slack rasio (unary) <input id="hpSlU" type="number" step="0.005" value="0.10"></label>
+    <label><input id="hpPur" type="checkbox"> Hanya pola dengan fib di PRZ</label>
+    <label><input id="hpLeg" type="checkbox" checked> Filter jumlah candle antar leg</label>
+    <label><input id="hpDd" type="checkbox" checked> Dedupe antar pola</label>
+    <label>Maks confirmed digambar <input id="hpMaxC" type="number" value="6"></label>
+    <label>Maks emerging digambar <input id="hpMaxE" type="number" value="6"></label>
+    <label>PRZ extend (bar) <input id="hpExt" type="number" value="40"></label>
+    <label><input id="hpP0" type="checkbox" checked> Bat</label>
+    <label><input id="hpP1" type="checkbox" checked> Butterfly</label>
+    <label><input id="hpP2" type="checkbox" checked> Shark</label>
+    <label><input id="hpP3" type="checkbox" checked> Cypher</label>
+    <label><input id="hpP4" type="checkbox" checked> Crab</label>
+    <label><input id="hpP5" type="checkbox" checked> Deep Crab</label>
+    <label><input id="hpP6" type="checkbox" checked> Gartley</label>
+    <label><input id="hpP7" type="checkbox" checked> Alt Bat</label>
+  </fieldset>
   <fieldset><legend>Support &amp; Resistance</legend>
     <label><input id="srOn" type="checkbox" checked> Tampil</label>
     <label>Jumlah per sisi <input id="srN" type="number" value="3"></label>
@@ -141,14 +189,20 @@
   </fieldset>
   <fieldset><legend>Tabel MTF</legend>
     <label><input id="tbOn" type="checkbox" checked> Tampil (biquote &amp; Binance)</label>
-    <label><input id="tbT" type="checkbox" checked> TF di kolom (seperti skrip Pine)</label>
+    <label><input id="tbT" type="checkbox"> TF di kolom (M1 sampai W, seperti skrip Pine)</label>
   </fieldset>
 </div>
 </aside>
 <div class="wrap">
-  <div class="pane"><div class="tag" id="t0">Harga</div><div id="main"></div><div id="cd"></div><div id="mtf"></div></div>
+<div class="charts">
+  <div class="pane"><div class="tag" id="t0">Harga</div><div id="main"></div><canvas id="hpc"></canvas><div id="cd"></div></div>
   <div class="pane"><div class="tag" id="t1">HARSI</div><div id="harsi"></div></div>
   <div class="note">biquote mengambil harga dari feed MetaTrader 5 sebuah broker, jadi bisa sedikit berbeda dari TradingView. Simbol berlaku untuk biquote dan Twelve Data; Binance selalu PAXG/USDT (token emas). Candle mingguan di biquote dihitung dari candle harian. Marker pola candle hanya untuk candle yang sudah tutup: biru muda = bullish, merah muda = bearish, abu-abu = netral. Di tabel: Candle Run = candle yang sedang berjalan, Candle Cls = candle sebelumnya yang sudah tutup (hijau bullish, merah bearish, oranye netral). Bukan saran investasi.</div>
+</div>
+<aside class="side" id="side">
+    <div class="tbox" id="boxMtf"><h3>Multi Timeframe</h3><div id="mtf"></div></div>
+    <div class="tbox" id="boxHp"><h3>Harmonic Pattern</h3><div id="hpd"></div></div>
+</aside>
 </div>
 </div>
 
@@ -216,7 +270,7 @@ const opts = () => ({
   layout:{background:{color:'#171c24'},textColor:'#8a94a3'},
   grid:{vertLines:{color:'#20262f'},horzLines:{color:'#20262f'}},
   rightPriceScale:{borderColor:'#262d38'},
-  timeScale:{borderColor:'#262d38',timeVisible:true,secondsVisible:false},
+  timeScale:{borderColor:'#262d38',timeVisible:true,secondsVisible:false,rightOffset:12},
   crosshair:{mode:0}
 });
 const cMain = LightweightCharts.createChart($('main'), opts());
@@ -248,7 +302,10 @@ charts.forEach(c=>c.timeScale().subscribeVisibleLogicalRangeChange(r=>{
 // ---------- indikator ----------
 const N=id=>+$(id).value, K=id=>$(id).checked;
 const cfg=()=>({utOn:K('utOn'),ua:N('ua'),uc:N('uc'),ha:K('ha'),sr:N('sr'),sl:N('sl'),sk:N('sk'),sd:N('sd'),rl:N('rl'),
-  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),srOn:K('srOn'),srN:Math.max(1,N('srN')),srPv:Math.max(2,N('srPv')),srMin:Math.max(1,N('srMin')),srTol:N('srTol'),cdOn:K('cdOn'),cdAll:K('cdAll'),mkOn:K('mkOn'),tbT:K('tbT'),cpTr:K('cpTr'),cpEma:Math.max(2,N('cpEma')),cpDoji:N('cpDoji')/100,cpSmall:N('cpSmall')/100,cpLong:N('cpLong'),cpShadow:N('cpShadow'),cpTol:N('cpTol')/100,
+  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),hpOn:K('hpOn'),hpTb:K('hpTb'),hpOld:K('hpOld'),hpEm:K('hpEm'),hpAh:K('hpAh'),hpSoft:K('hpSoft'),hpRatio:K('hpRatio'),hpLine:K('hpLine'),hpBox:K('hpBox'),hpFill:K('hpFill'),hpRN:K('hpRN'),hpTrade:K('hpTrade'),hpTN:Math.max(0,N('hpTN')),
+  hpZm:N('hpZm'),hpZp:N('hpZp'),hpZmax:N('hpZmax'),hpZmin:N('hpZmin'),hpZrt:K('hpZrt'),hpSlR:N('hpSlR'),hpSlU:N('hpSlU'),hpPur:K('hpPur'),hpLeg:K('hpLeg'),hpDd:K('hpDd'),
+  hpMaxC:Math.max(1,N('hpMaxC')),hpMaxE:Math.max(1,N('hpMaxE')),hpExt:Math.max(5,N('hpExt')),hpPat:[0,1,2,3,4,5,6,7].map(i=>K('hpP'+i)),
+  srOn:K('srOn'),srN:Math.max(1,N('srN')),srPv:Math.max(2,N('srPv')),srMin:Math.max(1,N('srMin')),srTol:N('srTol'),cdOn:K('cdOn'),cdAll:K('cdAll'),mkOn:K('mkOn'),tbT:K('tbT'),cpTr:K('cpTr'),cpEma:Math.max(2,N('cpEma')),cpDoji:N('cpDoji')/100,cpSmall:N('cpSmall')/100,cpLong:N('cpLong'),cpShadow:N('cpShadow'),cpTol:N('cpTol')/100,
   hLen:N('hLen'),hSm:Math.max(1,N('hSm')),hRL:N('hRL'),hMode:K('hMode'),hPlot:K('hPlot'),hHist:K('hHist'),
   xShow:K('xShow'),xRsi:N('xRsi'),xSto:N('xSto'),xK:N('xK'),xD:N('xD'),xOB:N('xOB'),xOS:N('xOS'),xSc:N('xSc'),xSig:K('xSig'),xZone:K('xZone'),
   lOB:N('lOB'),lOBx:N('lOBx'),lOS:N('lOS'),lOSx:N('lOSx')});
@@ -390,6 +447,475 @@ function drawSR(S,price){
   sup.forEach((l,i)=>mk(l,i,'#26a69a','S'));
 }
 
+// ---------- Harmonic Pattern Finder (port dari HarmonicPatternFinderV3 [XoRonX]) ----------
+const HP_BIG=1e10;
+const HP_PATS=[
+ {name:'Bat',      ab2xa:[.382,.5],  bc2ab:[.382,.886],cd2bc:[1.618,2.618],ad2xa:[.886,.886],cd2xc:[0,0],      xc2xa:[0,0],       cd2ab:[0,0]},
+ {name:'Butterfly',ab2xa:[.786,.786],bc2ab:[.382,.886],cd2bc:[1.618,2.618],ad2xa:[1.272,1.272],cd2xc:[0,0],    xc2xa:[0,0],       cd2ab:[0,0]},
+ {name:'Shark',    ab2xa:[0,0],      bc2ab:[1.13,1.618],cd2bc:[1.618,2.24],ad2xa:[0,0],      cd2xc:[.886,1.13],xc2xa:[0,0],       cd2ab:[0,0]},
+ {name:'Cypher',   ab2xa:[.382,.618], bc2ab:[0,0],     cd2bc:[0,0],        ad2xa:[0,0],      cd2xc:[.786,.786],xc2xa:[1.13,1.414],cd2ab:[0,0]},
+ {name:'Crab',     ab2xa:[.382,.618], bc2ab:[.382,.886],cd2bc:[2.24,3.618], ad2xa:[1.618,1.618],cd2xc:[0,0],    xc2xa:[0,0],       cd2ab:[0,0]},
+ {name:'Deep Crab',ab2xa:[.886,.886], bc2ab:[.382,.886],cd2bc:[2,3.618],    ad2xa:[1.618,1.618],cd2xc:[0,0],    xc2xa:[0,0],       cd2ab:[0,0]},
+ {name:'Gartley',  ab2xa:[.618,.618], bc2ab:[.382,.886],cd2bc:[1.272,1.618],ad2xa:[.786,.786],cd2xc:[0,0],      xc2xa:[0,0],       cd2ab:[0,0]},
+ {name:'Alt Bat',  ab2xa:[.382,.382], bc2ab:[.382,.886],cd2bc:[2,3.618],    ad2xa:[1.13,1.13],cd2xc:[0,0],     xc2xa:[0,0],       cd2ab:[0,0]}
+];
+const hca=p=>p[0]!==0&&p[1]!==0;
+const hslk=(p,P)=>p[0]===p[1]?P.slU:P.slR;
+function hfnz(start,src){ for(let i=start;i>=0;i--) if(src[i]!==0) return i; return null; }
+function hzzDir(idx,peaks,troughs){
+  let lp=hfnz(idx-1,peaks), lt=hfnz(idx-1,troughs);
+  while(lp!=null&&lt!=null&&lp===lt){ lp=hfnz(lp-1,peaks); lt=hfnz(lt-1,troughs); }
+  return (lp==null||lt==null)?0:(lp<lt?-1:1);
+}
+function hLegValid(P,x,a,b,c,d){
+  if(!P.leg) return true;
+  const xa=a-x, ab=b-a, bc=c-b, cd=d-c;
+  let ok=xa>=P.lmin&&ab>=P.lmin&&bc>=P.lmin&&cd>=P.lmin;
+  if(ok&&P.lminR>0) ok=ab/xa>=P.lminR&&bc/ab>=P.lminR&&cd/bc>=P.lminR;
+  if(ok&&P.lmaxR>0) ok=ab/xa<=P.lmaxR&&bc/ab<=P.lmaxR&&cd/bc<=P.lmaxR;
+  if(ok&&P.lcd>0) ok=cd/xa<=P.lcd;
+  return ok;
+}
+function hWindow(p,st,X,A,B,C,P){
+  const XA=Math.abs(A-X), XC=Math.abs(X-C), AB=Math.abs(A-B), BC=Math.abs(C-B);
+  let nearD=st?HP_BIG:-HP_BIG, farD=st?-HP_BIG:HP_BIG;
+  const f=(pair,base,len)=>{
+    const sl=hslk(pair,P);
+    const nv=st?base-(pair[0]-sl)*len:base+(pair[0]-sl)*len;
+    const fv=st?base-(pair[1]+sl)*len:base+(pair[1]+sl)*len;
+    nearD=st?Math.min(nearD,nv):Math.max(nearD,nv);
+    farD=st?Math.max(farD,fv):Math.min(farD,fv);
+  };
+  if(hca(p.cd2bc)) f(p.cd2bc,C,BC);
+  if(hca(p.ad2xa)) f(p.ad2xa,A,XA);
+  if(hca(p.cd2xc)) f(p.cd2xc,C,XC);
+  if(hca(p.cd2ab)) f(p.cd2ab,C,AB);
+  return [nearD,farD];
+}
+function hPurist(p,st,X,A,B,C,nearD,farD){
+  const XA=Math.abs(A-X), XC=Math.abs(X-C), AB=Math.abs(A-B), BC=Math.abs(C-B);
+  const chk=(pair,base,len)=>{
+    if(!hca(pair)) return true;
+    const nr=st?base-pair[0]*len:base+pair[0]*len, fr=st?base-pair[1]*len:base+pair[1]*len;
+    return st?(nearD>=fr&&nr>=farD):(nearD<=fr&&nr<=farD);
+  };
+  return chk(p.cd2bc,C,BC)&&chk(p.ad2xa,A,XA)&&chk(p.cd2xc,C,XC)&&chk(p.cd2ab,C,AB);
+}
+function hTimely(P,x,a,b,c,d){
+  const base=b-x;
+  return d<b+Math.floor(P.tE*base)?0:d<b+Math.ceil(P.tL*base)?1:2;
+}
+function hAllowMatched(P,pat,m){
+  let ok=true;
+  if(P.pur) ok=hPurist(pat,m.bull,m.x,m.a,m.b,m.c,m.nearD,m.farD);
+  if(ok&&(P.fE||P.fL)){ const ts=hTimely(P,m.xi,m.ai,m.bi,m.ci,m.di); ok=!(P.fE&&ts===0); ok=ok&&!(P.fL&&ts===2); }
+  return ok;
+}
+function hAllowUnder(P,pat,m,cur){
+  let ok=true;
+  if(P.pur) ok=hPurist(pat,m.bull,m.x,m.a,m.b,m.c,m.nearD,m.farD);
+  if(ok&&P.fL) ok=hTimely(P,m.xi,m.ai,m.bi,m.ci,cur)!==2;
+  return ok;
+}
+function hZigZag(o,h,l,c,peaks,troughs,P){
+  const count=h.length;
+  if(count<=1) return;
+  let dirUp=false, rtChange=false, lastIndex=0, lastIndex2=0, contra=0, atr=0;
+  troughs[0]=l[0];
+  let limit=count-1-(P.rt?0:1); if(limit<1) limit=1;
+  for(let bar=1;bar<=limit;bar++){
+    const rtBar=bar===count-1;
+    if(!rtBar){
+      const tr=Math.max(h[bar],c[bar-1])-Math.min(l[bar],c[bar-1]);
+      atr+=(tr-atr)*(2/(1+P.atrP));
+      if(rtChange&&P.rt){
+        if(dirUp) peaks[lastIndex]=h[lastIndex]; else troughs[lastIndex]=l[lastIndex];
+        peaks[count-1]=0; troughs[count-1]=0; rtChange=false;
+      }
+      troughs[bar]=0; peaks[bar]=0;
+    }
+    let shouldnt=bar-lastIndex<P.zmin;
+    const shall=bar-lastIndex>P.zmax;
+    let must=false, should=false, can=false;
+    if(dirUp){ must=l[bar]<l[lastIndex2]; should=peaks[lastIndex]-l[bar]>atr*P.mult; can=l[bar]<l[contra]; }
+    else { must=h[bar]>h[lastIndex2]; should=h[bar]-troughs[lastIndex]>atr*P.mult; can=h[bar]>h[contra]; }
+    let changeNow=must||(can&&should&&!shouldnt);
+    if(rtBar&&P.rt){
+      if(dirUp){
+        let upd=false;
+        if(!rtChange&&h[bar]>peaks[lastIndex]){ peaks[lastIndex]=0; peaks[bar]=h[bar]; rtChange=true; upd=true; }
+        if(!upd&&rtChange&&h[bar]>peaks[bar]) peaks[bar]=h[bar];
+      } else {
+        let upd=false;
+        if(!rtChange&&l[bar]<troughs[lastIndex]){ troughs[lastIndex]=0; troughs[bar]=l[bar]; rtChange=true; upd=true; }
+        if(!upd&&rtChange&&l[bar]<troughs[bar]) troughs[bar]=l[bar];
+      }
+    } else {
+      if(can) contra=bar;
+      if(dirUp){
+        if(h[bar]>peaks[lastIndex]){
+          peaks[lastIndex]=0; peaks[bar]=h[bar];
+          if(o[bar]>c[bar]){
+            shouldnt=0<P.zmin; should=peaks[bar]-l[bar]>atr*P.mult; changeNow=must||(can&&should&&!shouldnt);
+            if(changeNow){ troughs[bar]=l[bar]; dirUp=false; lastIndex2=bar; }
+          } else if(changeNow){ peaks[lastIndex]=h[lastIndex]; troughs[bar]=l[bar]; lastIndex2=bar; }
+          lastIndex=bar; contra=bar;
+        } else if(changeNow){
+          troughs[bar]=l[bar]; dirUp=false; lastIndex2=lastIndex; lastIndex=bar; contra=bar;
+        } else if(shall){
+          let skip=troughs[lastIndex]===0?0:1;
+          if(o[lastIndex]<c[lastIndex]&&skip===0) skip+=1;
+          let mi=lastIndex+skip;
+          if(mi<=bar){
+            for(let pr=lastIndex+skip;pr<=bar;pr++) if(l[pr]<=l[mi]) mi=pr;
+            troughs[mi]=l[mi]; dirUp=false; lastIndex2=lastIndex; lastIndex=mi; contra=mi;
+          }
+        }
+      } else {
+        if(l[bar]<troughs[lastIndex]){
+          troughs[lastIndex]=0; troughs[bar]=l[bar];
+          if(o[bar]<c[bar]){
+            shouldnt=0<P.zmin; should=h[bar]-troughs[bar]>atr*P.mult; changeNow=must||(can&&should&&!shouldnt);
+            if(changeNow){ peaks[bar]=h[bar]; dirUp=true; lastIndex2=bar; }
+          } else if(changeNow){ troughs[lastIndex]=l[lastIndex]; peaks[bar]=h[bar]; lastIndex2=bar; }
+          lastIndex=bar; contra=bar;
+        } else if(changeNow){
+          peaks[bar]=h[bar]; dirUp=true; lastIndex2=lastIndex; lastIndex=bar; contra=bar;
+        } else if(shall){
+          let skip=peaks[lastIndex]===0?0:1;
+          if(o[lastIndex]>c[lastIndex]&&skip===0) skip+=1;
+          let mx=lastIndex+skip;
+          if(mx<=bar){
+            for(let pr=lastIndex+skip;pr<=bar;pr++) if(h[pr]>=h[mx]) mx=pr;
+            peaks[mx]=h[mx]; dirUp=true; lastIndex2=lastIndex; lastIndex=mx; contra=mx;
+          }
+        }
+      }
+      peaks[count-1]=0; troughs[count-1]=0;
+    }
+  }
+}
+function hEvents(off,o,c,peaks,troughs){
+  const ev=[];
+  for(let i=0;i<peaks.length;i++){
+    const pk=peaks[i], tr=troughs[i];
+    if(pk===0&&tr===0) continue;
+    const bar=off+i;
+    if(pk!==0&&tr!==0){
+      if(c[i]>=o[i]){ ev.push({bar,price:tr,kind:-1}); ev.push({bar,price:pk,kind:1}); }
+      else { ev.push({bar,price:pk,kind:1}); ev.push({bar,price:tr,kind:-1}); }
+    } else if(tr!==0) ev.push({bar,price:tr,kind:-1});
+    else ev.push({bar,price:pk,kind:1});
+  }
+  return ev;
+}
+function hFind(P,pat,pi,startBar,cur,lpa,lta,ev,matched,under,over){
+  const n=ev.length; if(n<4) return;
+  const ab2=hca(pat.ab2xa), bc2=hca(pat.bc2ab), xc2=hca(pat.xc2xa);
+  const abS=hslk(pat.ab2xa,P), bcS=hslk(pat.bc2ab,P), xcS=hslk(pat.xc2xa,P);
+  const last=n-1;
+  for(let xi=0;xi<=n-4;xi++){
+    const xe=ev[xi]; if(xe.bar<startBar) continue;
+    const st=xe.kind===-1, X=xe.price;
+    let exA=st?-HP_BIG:HP_BIG;
+    for(let ai=xi+1;ai<=n-3;ai++){
+      const ae=ev[ai];
+      if(ae.kind===xe.kind){ if((st&&ae.price<X)||(!st&&ae.price>X)) break; continue; }
+      const A=ae.price;
+      if((st&&A<exA)||(!st&&A>exA)) continue;
+      exA=A;
+      const XA=Math.abs(A-X); if(XA===0) continue;
+      let exB=st?HP_BIG:-HP_BIG;
+      for(let bi=ai+1;bi<=n-2;bi++){
+        const be=ev[bi];
+        if(be.kind===ae.kind){ if((st&&be.price>A)||(!st&&be.price<A)) break; continue; }
+        const B=be.price;
+        if((st&&B>exB)||(!st&&B<exB)) continue;
+        exB=B;
+        const AB=Math.abs(A-B); if(AB===0) continue;
+        const abR=AB/XA;
+        if(ab2&&abR<pat.ab2xa[0]-abS) continue;
+        if(ab2&&abR>pat.ab2xa[1]+abS) break;
+        let exC=st?-HP_BIG:HP_BIG;
+        for(let ci=bi+1;ci<=last;ci++){
+          const ce=ev[ci];
+          if(ce.kind===be.kind){ if((st&&ce.price<B)||(!st&&ce.price>B)) break; continue; }
+          const C=ce.price;
+          if((st&&C<exC)||(!st&&C>exC)) continue;
+          exC=C;
+          const BC=Math.abs(C-B), XC=Math.abs(X-C);
+          if(BC===0||XC===0) continue;
+          const bcR=BC/AB, xcR=XC/XA;
+          if((bc2&&bcR<pat.bc2ab[0]-bcS)||(xc2&&xcR<pat.xc2xa[0]-xcS)) continue;
+          if((bc2&&bcR>pat.bc2ab[1]+bcS)||(xc2&&xcR>pat.xc2xa[1]+xcS)) break;
+          let lastC=true;
+          for(let fc=ci+1;fc<=last;fc++){ const pc=ev[fc]; if(pc.kind===ce.kind&&((st&&pc.price>C)||(!st&&pc.price<C))){ lastC=false; break; } }
+          let [nearD,farD]=hWindow(pat,st,X,A,B,C,P);
+          nearD=Math.max(nearD,0); farD=Math.max(farD,0);
+          if(nearD<=0&&farD<=0) continue;
+          if((st&&farD>nearD)||(!st&&farD<nearD)) continue;
+          let exD=st?HP_BIG:-HP_BIG, produced=false;
+          for(let di=ci+1;di<=last;di++){
+            const de=ev[di];
+            if(de.kind===ce.kind){ if((!st&&de.price<C)||(st&&de.price>C)) break; continue; }
+            const D=de.price;
+            if((st&&D>exD)||(!st&&D<exD)) continue;
+            exD=D;
+            let lastD=true;
+            for(let fd=di+1;fd<=last;fd++){ const pd=ev[fd]; if(pd.kind===de.kind&&((!st&&pd.price>D)||(st&&pd.price<D))){ lastD=false; break; } }
+            const m={bull:st,xi:xe.bar,ai:ae.bar,bi:be.bar,ci:ce.bar,di:de.bar,x:X,a:A,b:B,c:C,d:D,nearD,farD,pi};
+            if(!hLegValid(P,m.xi,m.ai,m.bi,m.ci,m.di)) continue;
+            if((st&&D>nearD)||(!st&&D<nearD)){
+              if(lastC&&lastD&&hAllowUnder(P,pat,m,cur)){ under.push(m); produced=true; break; }
+            } else if((st&&D<farD)||(!st&&D>farD)){
+              if(hAllowMatched(P,pat,m)) over.push(m);
+              break;
+            } else if(hAllowMatched(P,pat,m)) matched.push(m);
+          }
+          const oneAhead=st?(ce.bar===lpa&&(lta==null||lta<=lpa)):(ce.bar===lta&&(lpa==null||lpa<=lta));
+          if(!produced&&lastC&&oneAhead){
+            const pr={bull:st,xi:xe.bar,ai:ae.bar,bi:be.bar,ci:ce.bar,di:cur,x:X,a:A,b:B,c:C,d:nearD,nearD,farD,pi};
+            if(hLegValid(P,pr.xi,pr.ai,pr.bi,pr.ci,pr.di)&&hAllowUnder(P,pat,pr,cur)) under.push(pr);
+          }
+        }
+      }
+    }
+  }
+}
+const hCore=(a,b)=>(a.xi===b.xi)+(a.ai===b.ai)+(a.bi===b.bi)+(a.ci===b.ci);
+function hOverlaps(P,m,per,tra){
+  for(const arr of [per,tra]) for(const s of arr){
+    let n=hCore(m,s);
+    if(n>=4) return true;
+    if(s.di===m.di) n++;
+    if(n>P.share) return true;
+  }
+  return false;
+}
+const hProjConf=(P,m,acc)=>acc.some(s=>hCore(m,s)>P.share);
+function hDev(act,pair){
+  if(!hca(pair)) return 0;
+  if(pair[0]===pair[1]) return Math.abs(act-pair[0]);
+  return act<pair[0]?pair[0]-act:act>pair[1]?act-pair[1]:0;
+}
+function hScore(m,proj){
+  const pat=HP_PATS[m.pi], dPx=proj?(m.nearD+m.farD)/2:m.d;
+  const XA=Math.abs(m.a-m.x), AB=Math.abs(m.a-m.b), BC=Math.abs(m.c-m.b), XC=Math.abs(m.x-m.c);
+  const CD=Math.abs(m.c-dPx), AD=Math.abs(m.a-dPx);
+  let sc=0;
+  if(XA>0&&AB>0&&BC>0&&XC>0){
+    sc+=hDev(AB/XA,pat.ab2xa)+hDev(BC/AB,pat.bc2ab)+hDev(XC/XA,pat.xc2xa)+hDev(CD/BC,pat.cd2bc)+hDev(AD/XA,pat.ad2xa)+hDev(CD/XC,pat.cd2xc)+hDev(CD/AB,pat.cd2ab);
+  }
+  return sc;
+}
+function hSortScore(arr,proj){
+  const t=arr.map(m=>[m,hScore(m,proj)]); t.sort((a,b)=>a[1]-b[1]);
+  arr.length=0; t.forEach(x=>arr.push(x[0]));
+}
+function hDedupe(P,arr,proj){
+  hSortScore(arr,proj);
+  const kept=[];
+  for(const m of arr){
+    let conflict=false;
+    for(const k of kept){
+      let sh=hCore(m,k);
+      if(proj) conflict=sh>P.share;
+      else if(sh>=4) conflict=true;
+      else { if(k.di===m.di) sh++; conflict=sh>P.share; }
+      if(conflict) break;
+    }
+    if(!conflict) kept.push(m);
+  }
+  arr.length=0; kept.forEach(m=>arr.push(m));
+}
+function hProcess(P,pat,raw,rawU,rawO,lpa,lta,endsT,conf,trans,proj,ahead,over){
+  const accP=[], accT=[];
+  hSortScore(raw,false);
+  for(const m of raw){
+    if(hOverlaps(P,m,accP,accT)) continue;
+    const active=(endsT&&m.bull&&m.di===lta)||(!endsT&&!m.bull&&m.di===lpa);
+    if(active){ accT.push(m); trans.push(m); } else { accP.push(m); conf.push(m); }
+  }
+  rawU.sort((a,b)=>a.nearD-b.nearD);
+  const bearAcc=[], bullAcc=[];
+  for(let i=0;i<rawU.length;i++){
+    const m=rawU[i];
+    if(!m.bull&&!hOverlaps(P,m,accP,accT)&&!hProjConf(P,m,bearAcc)){
+      const oa=m.ci===lta&&(lpa==null||lpa<=lta);
+      bearAcc.push(m); (oa?ahead:proj).push(m);
+    }
+  }
+  for(let i=rawU.length-1;i>=0;i--){
+    const m=rawU[i];
+    if(m.bull&&!hOverlaps(P,m,accP,accT)&&!hProjConf(P,m,bullAcc)){
+      const oa=m.ci===lpa&&(lta==null||lta<=lpa);
+      bullAcc.push(m); (oa?ahead:proj).push(m);
+    }
+  }
+  rawO.sort((a,b)=>a.di-b.di);
+  const accO=[];
+  for(const m of rawO){
+    if(!hOverlaps(P,m,accP,accT)&&!hProjConf(P,m,accO)){ accO.push(m); over.push(m); }
+  }
+}
+// ----- gambar -----
+const HP_BLUE='#87cefa', HP_PINK='#ffb6c1', HP_GREEN='#2e8b57', HP_ORANGE='#ff8c00';
+function hRgba(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+function hDraw(S,m,state,out,tk){
+  const pat=HP_PATS[m.pi], proj=state>=2, ext=S.hpExt;
+  const raw=proj?(m.bull?HP_GREEN:HP_ORANGE):(m.bull?HP_BLUE:HP_PINK);
+  const main=proj?(S.hpSoft?hRgba(raw,.22):raw):raw;
+  const rat=proj?(S.hpSoft?'rgba(192,192,192,.2)':'#c0c0c0'):'#c0c0c0';
+  const w=proj?1:2, dash=proj?[6,4]:[];
+  const dP=proj?m.nearD:m.d;
+  const dec=p=>p<10?5:p<200?3:2, fp=p=>'('+p.toFixed(dec(p))+')';
+  const L=(i1,p1,i2,p2,c,ds,wd)=>out.push({t:'l',i1,p1,i2,p2,c,ds,w:wd});
+  const T=(i,p,s,c)=>out.push({t:'t',i,p,s,c});
+  // isi warna segitiga XAB dan BCD (cyan = bullish, pink = bearish)
+  if(S.hpFill){
+    const fc=m.bull?'#4dd0e1':'#f48fb1', a=proj?(S.hpSoft?.10:.2):.28;
+    out.push({t:'f',pts:[[m.xi,m.x],[m.ai,m.a],[m.bi,m.b]],c:hRgba(fc,a)});
+    out.push({t:'f',pts:[[m.bi,m.b],[m.ci,m.c],[m.di,dP]],c:hRgba(fc,a)});
+  }
+  L(m.xi,m.x,m.ai,m.a,main,dash,w); L(m.ai,m.a,m.bi,m.b,main,dash,w); L(m.bi,m.b,m.ci,m.c,main,dash,w); L(m.ci,m.c,m.di,dP,main,dash,w);
+  if(S.hpRatio){
+    L(m.xi,m.x,m.bi,m.b,rat,[2,3],1); L(m.xi,m.x,m.di,dP,rat,[2,3],1); L(m.ai,m.a,m.ci,m.c,rat,[2,3],1); L(m.bi,m.b,m.di,dP,rat,[2,3],1);
+  }
+  // angka rasio di tengah garis rasio: AB/XA (X-B), BC/AB (A-C), CD/BC (B-D), AD/XA (X-D)
+  if(S.hpRN){
+    const XA=Math.abs(m.a-m.x), AB=Math.abs(m.a-m.b), BC=Math.abs(m.c-m.b), CD=Math.abs(m.c-dP), AD=Math.abs(m.a-dP);
+    const col=proj&&S.hpSoft?hRgba(raw,.65):raw;
+    const R=(i1,p1,i2,p2,v)=>out.push({t:'r',i:(i1+i2)/2,p:(p1+p2)/2,s:v.toFixed(3),c:col});
+    if(XA>0&&AB>0&&BC>0){ R(m.xi,m.x,m.bi,m.b,AB/XA); R(m.ai,m.a,m.ci,m.c,BC/AB); R(m.bi,m.b,m.di,dP,CD/BC); R(m.xi,m.x,m.di,dP,AD/XA); }
+  }
+  if(!(proj&&S.hpSoft)){
+    T(m.xi,m.x,'X '+(proj?'':pat.name),main); T(m.ai,m.a,'A',main); T(m.bi,m.b,'B',main); T(m.ci,m.c,'C',main);
+  }
+  T(m.di,dP,proj?'D '+pat.name:'D',proj?raw:main);
+  const prz=proj?m.nearD:m.farD, top=Math.max(m.nearD,m.farD), bot=Math.min(m.nearD,m.farD);
+  if(S.hpLine) L(m.di-1,prz,m.di+ext,prz,raw,[6,4],1);
+  if(S.hpBox&&m.nearD!==m.farD){
+    out.push({t:'b',i1:m.di-1,top,i2:m.di+ext,bot,bc:hRgba(raw,.45),fc:hRgba(raw,.12),txt:'PRZ '+pat.name,tc:raw});
+    T(m.di+ext,top,fp(top),raw); T(m.di+ext,bot,fp(bot),raw);   // label harga batas atas dan bawah PRZ
+  } else if(S.hpLine) T(m.di+ext,prz,fp(prz),raw);
+  // kotak trade: entry di PRZ, STOP sedikit di luar sisi jauh PRZ, TP1/TP2 = 0,382 / 0,618 dari A ke D
+  if(S.hpTrade&&state>=1&&state<=2&&tk&&tk()){
+    const dir=m.bull?1:-1, ref=proj?(m.nearD+m.farD)/2:m.d, AD=Math.abs(m.a-ref);
+    const t1=ref+.382*(m.a-ref), t2=ref+.618*(m.a-ref), stop=m.farD-dir*.1*AD, x1=m.di, x2=m.di+ext;
+    out.push({t:'b',i1:x1,top:Math.max(ref,t2),i2:x2,bot:Math.min(ref,t2),bc:'rgba(0,0,0,0)',fc:'rgba(38,166,154,.22)',txt:''});
+    out.push({t:'b',i1:x1,top:Math.max(ref,stop),i2:x2,bot:Math.min(ref,stop),bc:'rgba(0,0,0,0)',fc:'rgba(239,83,80,.22)',txt:''});
+    const lv=(p,s,c)=>{ L(x1,p,x2,p,c,[],1); T(x2,p,s+' '+fp(p),c); };
+    lv(t1,'TP1','#26a69a'); lv(t2,'TP2','#26a69a'); lv(stop,'STOP','#ef5350');
+    out.push({t:'r',i:x1,p:ref,s:m.bull?'BUY':'SELL',c:m.bull?'#26a69a':'#ef5350',fill:true});
+    out.push({t:'a',i1:x1+ext*.15,p1:ref,i2:x1+ext*.7,p2:t1,c:'#eceff1'});
+  }
+}
+function hDash(conf,trans,proj,over){
+  const cnt=(arr,pi)=>arr.filter(m=>m.pi===pi).length;
+  const hit=pi=>{ const w=cnt(conf,pi)+cnt(trans,pi), f=cnt(over,pi), t=w+f; return (t>0?String(+(100*w/t).toFixed(2)):'0.00')+'%'; };
+  const dec=p=>p<10?5:p<200?3:2, f=p=>p.toFixed(dec(p));
+  const rows=[];
+  const add=(arr,st,col,dim)=>arr.slice(0,4).forEach(m=>rows.push([m,st,col,dim]));
+  add(proj,'Projection','#00e5ff',false); add(trans,'Emerging','#ffeb3b',false); add(conf,'Confirmed','#66bb6a',false); add(over,'Overshot','#ef5350',true);
+  if(!rows.length) return '';
+  let h='<table><tr><th>Arah</th><th>Pola</th><th>Status</th><th>PRZ</th><th>PRZ Hit</th></tr>';
+  rows.forEach(([m,st,col,dim])=>{
+    const base=m.bull?HP_BLUE:HP_PINK, c=dim?hRgba(base,.6):base;
+    const lo=Math.min(m.nearD,m.farD), hi=Math.max(m.nearD,m.farD);
+    const prz=lo===hi?f(lo):f(lo)+' - '+f(hi);
+    h+=`<tr><td style="color:${c}">${m.bull?'Bull':'Bear'}</td><td style="color:${c}">${HP_PATS[m.pi].name}</td><td style="color:${col}">${st}</td><td style="color:${c}">${prz}</td><td style="color:${c}">${hit(m.pi)}</td></tr>`;
+  });
+  return h+'</table>';
+}
+function hCompute(d,S){
+  const P={mult:S.hpZm,atrP:Math.max(1,Math.round(S.hpZp)),zmax:S.hpZmax,zmin:S.hpZmin,rt:S.hpZrt,share:2,slR:S.hpSlR,slU:S.hpSlU,tE:.382,tL:1.618,pur:S.hpPur,fE:false,fL:false,leg:S.hpLeg,lmin:3,lminR:.25,lmaxR:3,lcd:3,dd:S.hpDd,bars:300};
+  const n=d.length, hc=Math.min(1000,n), off=n-hc, w=d.slice(off);
+  const o=w.map(x=>x.open), h=w.map(x=>x.high), l=w.map(x=>x.low), c=w.map(x=>x.close);
+  const peaks=Array(hc).fill(0), troughs=Array(hc).fill(0);
+  hZigZag(o,h,l,c,peaks,troughs,P);
+  const lpi=hfnz(hc-1,peaks), lti=hfnz(hc-1,troughs);
+  const conf=[],trans=[],proj=[],ahead=[],over=[];
+  if(lpi!=null&&lti!=null){
+    let endsT=lti>lpi;
+    if(lti===lpi){ const z=hzzDir(lpi,peaks,troughs); if(z===-1) endsT=true; else if(z===1) endsT=false; }
+    const lpa=off+lpi, lta=off+lti, cur=n-1, start=Math.max(off,cur-P.bars);
+    const ev=hEvents(off,o,c,peaks,troughs);
+    HP_PATS.forEach((pat,pi)=>{
+      if(!S.hpPat[pi]) return;
+      const m=[],u=[],ov=[];
+      hFind(P,pat,pi,start,cur,lpa,lta,ev,m,u,ov);
+      hProcess(P,pat,m,u,ov,lpa,lta,endsT,conf,trans,proj,ahead,over);
+    });
+  }
+  if(P.dd){ hDedupe(P,conf,false); hDedupe(P,trans,false); hDedupe(P,proj,true); hDedupe(P,ahead,true); hDedupe(P,over,false); }
+  [conf,trans,proj,ahead,over].forEach(a=>a.sort((x,y)=>y.di-x.di));
+  const html=hDash(conf,trans,proj,over);
+  const items=[], trim=(a,k)=>{ while(a.length>k) a.pop(); };
+  let tradeLeft=S.hpTN; const tk=()=>tradeLeft-->0;
+  if(S.hpOld){ trim(conf,S.hpMaxC); conf.forEach(m=>hDraw(S,m,0,items)); }
+  if(S.hpEm){ trim(trans,S.hpMaxE); trim(proj,S.hpMaxE); trans.forEach(m=>hDraw(S,m,1,items,tk)); proj.forEach(m=>hDraw(S,m,2,items,tk)); }
+  if(S.hpAh){ trim(ahead,S.hpMaxE); ahead.forEach(m=>hDraw(S,m,3,items)); }
+  return {items,html,counts:{conf:conf.length,trans:trans.length,proj:proj.length,ahead:ahead.length,over:over.length}};
+}
+// ---------- kanvas overlay ----------
+let hpVer=0, hpLast=0, hpSig='';
+function hpPaint(){
+  const cv=$('hpc'); if(!cv||!cv.getContext) return;
+  const wrap=$('main'), w=wrap.clientWidth, h=wrap.clientHeight, dpr=window.devicePixelRatio||1;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); cv.style.width=w+'px'; cv.style.height=h+'px'; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  if(!K('hpOn')||!cache||!cache.hp) return;
+  const ts=cMain.timeScale();
+  let pw=64, th=26; try{ pw=cMain.priceScale('right').width()||64; }catch(e){} try{ th=ts.height()||26; }catch(e){}
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,Math.max(0,w-pw),Math.max(0,h-th)); ctx.clip();
+  const X=i=>ts.logicalToCoordinate(i), Y=p=>candle.priceToCoordinate(p);
+  ctx.font='10px -apple-system,system-ui,sans-serif';
+  for(const it of cache.hp.items){
+    if(it.t==='l'){
+      const x1=X(it.i1),y1=Y(it.p1),x2=X(it.i2),y2=Y(it.p2);
+      if(x1==null||y1==null||x2==null||y2==null) continue;
+      ctx.beginPath(); ctx.setLineDash(it.ds); ctx.lineWidth=it.w; ctx.strokeStyle=it.c; ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    } else if(it.t==='f'){
+      const pts=it.pts.map(q=>[X(q[0]),Y(q[1])]);
+      if(pts.some(q=>q[0]==null||q[1]==null)) continue;
+      ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0],pts[k][1]); ctx.closePath(); ctx.fillStyle=it.c; ctx.fill();
+    } else if(it.t==='b'){
+      const x1=X(it.i1),x2=X(it.i2),y1=Y(it.top),y2=Y(it.bot);
+      if(x1==null||x2==null||y1==null||y2==null) continue;
+      ctx.setLineDash([]); ctx.fillStyle=it.fc; ctx.fillRect(x1,y1,x2-x1,y2-y1); ctx.lineWidth=1; ctx.strokeStyle=it.bc; ctx.strokeRect(x1,y1,x2-x1,y2-y1);
+      if(it.txt){
+        ctx.font='bold 10px -apple-system,system-ui,sans-serif'; ctx.fillStyle=it.tc; ctx.textAlign='center';
+        const hh=Math.abs(y2-y1); ctx.fillText(it.txt,(x1+x2)/2,hh>=14?(y1+y2)/2+3.5:Math.min(y1,y2)-4);
+        ctx.textAlign='start'; ctx.font='10px -apple-system,system-ui,sans-serif';
+      }
+    } else if(it.t==='r'){
+      const x=X(it.i),y=Y(it.p); if(x==null||y==null) continue;
+      ctx.setLineDash([]); const tw=ctx.measureText(it.s).width+8, hh=14, rx=x-tw/2, ry=y-hh/2;
+      ctx.beginPath(); ctx.moveTo(rx+3,ry); ctx.lineTo(rx+tw-3,ry); ctx.quadraticCurveTo(rx+tw,ry,rx+tw,ry+3); ctx.lineTo(rx+tw,ry+hh-3); ctx.quadraticCurveTo(rx+tw,ry+hh,rx+tw-3,ry+hh); ctx.lineTo(rx+3,ry+hh); ctx.quadraticCurveTo(rx,ry+hh,rx,ry+hh-3); ctx.lineTo(rx,ry+3); ctx.quadraticCurveTo(rx,ry,rx+3,ry); ctx.closePath();
+      ctx.fillStyle=it.fill?it.c:'rgba(23,28,36,.88)'; ctx.fill(); if(!it.fill){ ctx.lineWidth=1; ctx.strokeStyle=it.c; ctx.stroke(); }
+      ctx.fillStyle=it.fill?'#fff':it.c; ctx.textAlign='center'; ctx.fillText(it.s,x,y+3.5); ctx.textAlign='start';
+    } else if(it.t==='a'){
+      const x1=X(it.i1),y1=Y(it.p1),x2=X(it.i2),y2=Y(it.p2);
+      if(x1==null||y1==null||x2==null||y2==null) continue;
+      const ang=Math.atan2(y2-y1,x2-x1);
+      ctx.setLineDash([]); ctx.lineWidth=1.5; ctx.strokeStyle=it.c; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-8*Math.cos(ang-.45),y2-8*Math.sin(ang-.45)); ctx.lineTo(x2-8*Math.cos(ang+.45),y2-8*Math.sin(ang+.45)); ctx.closePath(); ctx.fillStyle=it.c; ctx.fill();
+    } else {
+      const x=X(it.i),y=Y(it.p); if(x==null||y==null) continue;
+      ctx.setLineDash([]); ctx.fillStyle=it.c; ctx.fillText(it.s,x+3,y-3);
+    }
+  }
+  ctx.restore();
+}
+function hpTick(){
+  try{
+    const ts=cMain.timeScale(), last=cache&&cache.d.length?cache.d[cache.d.length-1].close:0;
+    const sig=[ts.logicalToCoordinate(0),ts.logicalToCoordinate(100),candle.priceToCoordinate(last),candle.priceToCoordinate(last*1.01),$('main').clientWidth,$('main').clientHeight,hpVer].join('|');
+    if(sig!==hpSig){ hpSig=sig; hpPaint(); }
+  }catch(e){}
+}
+setInterval(hpTick,60);
+
 // ---------- deteksi pola candle (port dari f_detect di skrip Pine) ----------
 function cpCtx(d,S){
   return {ema:ema(d.map(x=>x.close),S.cpEma), avgB:sma(d.map(x=>Math.abs(x.close-x.open)),10), avgR:sma(d.map(x=>x.high-x.low),10)};
@@ -496,7 +1022,7 @@ function tableHTML(S,mtf){
     defs.forEach((d,r)=>{ h+=`<tr><th>${d[0]}</th>`+TFS.map((x,i)=>cell(r,i)).join('')+'</tr>'; });
   } else {
     h+='<tr><th>TF</th>'+defs.map(d=>`<th>${d[0]}</th>`).join('')+'</tr>';
-    TFS.forEach((x,i)=>{ h+=`<tr><th>${x[0]}</th>`+defs.map((d,r)=>cell(r,i)).join('')+'</tr>'; });
+    TFS.map((x,i)=>[x,i]).reverse().forEach(([x,i])=>{ h+=`<tr><th>${x[0]}</th>`+defs.map((d,r)=>cell(r,i)).join('')+'</tr>'; });   // TF besar di atas, M1 paling bawah
   }
   return h+'</table>';
 }
@@ -602,6 +1128,13 @@ function render(live){
     candle.setMarkers(mk);
     if(!live||!cache.sr) cache.sr=calcSR(d,S);
     drawSR(S,d[d.length-1].close);
+    if(S.hpOn){
+      const nowT=Date.now();
+      if(!live||!cache.hp||nowT-hpLast>3000){
+        try{ cache.hp=hCompute(d,S); hpLast=nowT; }catch(e){ cache.hp=null; console.error(e); }
+        $('hpd').innerHTML=(S.hpTb&&cache.hp)?cache.hp.html:''; hpVer++;
+      }
+    } else { cache.hp=null; $('hpd').innerHTML=''; hpVer++; }
 
     const mid=sma(c,S.bl), sdv=stdev(c,S.bl);
     bbM.setData(toSeries(t,mid));
@@ -651,6 +1184,7 @@ function render(live){
 
     tickCd(); requestAnimationFrame(placeCd);
     if(!live) $('mtf').innerHTML = (S.tbOn&&cache.mtf)?tableHTML(S,cache.mtf):'';
+    $('boxMtf').style.display=S.tbOn?'':'none'; $('boxHp').style.display=(S.hpOn&&S.hpTb)?'':'none';
     const L=d.length-1, f=v=>v==null?'-':v.toFixed(1);
     if(cache.demo){ st.textContent=`DATA CONTOH (bukan harga asli) · gagal ambil data: ${cache.why}`; return; }
     st.textContent=`Close ${d[L].close.toFixed(2)} · UT ${ut.pos[L]===1?'Buy':ut.pos[L]===-1?'Sell':'-'} · RSI ${f(rsiSm[L]==null?null:rsiSm[L]+50)} · SRSI %K ${f(sk[L])} · %D ${f(sdd[L])}`;
@@ -812,7 +1346,8 @@ document.querySelectorAll('#tfs button').forEach(b=>b.onclick=()=>{
   trig();
 });
 checkSymbols();
-if(window.innerWidth<900) $('cfg').classList.add('hide');
+if(window.innerWidth<1200) $('cfg').classList.add('hide');
+$('sideBtn').onclick=()=>{ $('side').classList.toggle('hide'); setTimeout(placeCd,300); };
 $('cfgBtn').onclick=()=>{ $('cfg').classList.toggle('hide'); setTimeout(placeCd,300); };
 try{ $('key').value=localStorage.getItem('xau_key')||''; }catch(e){}
 loadData();
