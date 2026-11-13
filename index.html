@@ -65,10 +65,12 @@
       <option value="binance">Binance PAXG/USDT (tanpa API key)</option>
       <option value="twelve">Twelve Data XAU/USD (API key gratis)</option>
       <option value="yahoo">Yahoo Finance (saham Indonesia/IDX &amp; global, tanpa API key)</option>
+      <option value="stooq">Stooq (saham Indonesia, data HARIAN saja, tanpa API key)</option>
     </select>
   </label>
   <label>Simbol <select id="sym" style="max-width:220px"></select></label>
   <input id="key" type="password" placeholder="Twelve Data API key" style="display:none;width:170px">
+  <label>Proxy sendiri <input id="pxy" type="text" value="https://workerchart.hujatulatif-7.workers.dev" placeholder="https://xxx.workers.dev (opsional)" style="width:200px"></label>
   <span id="ws"></span><span id="status"></span>
 </header>
 <div class="tfbar" id="tfs"><input type="hidden" id="tf" value="1h">
@@ -211,7 +213,7 @@
 <div class="charts">
   <div class="pane"><div class="tag" id="t0">Harga</div><div id="main"></div><canvas id="hpc"></canvas><div id="cd"></div></div>
   <div class="pane"><div class="tag" id="t1">HARSI</div><div id="harsi"></div></div>
-  <div class="note">biquote mengambil harga dari feed MetaTrader 5 sebuah broker, jadi bisa sedikit berbeda dari TradingView. Simbol berlaku untuk biquote dan Twelve Data; Binance selalu PAXG/USDT (token emas). Yahoo Finance dipakai untuk saham Indonesia/IHSG (kode pakai akhiran .JK, mis. BBCA.JK, atau ^JKSE untuk indeks) maupun saham/indeks global lain — tanpa API key, tapi tanpa live tick/WebSocket (refresh tiap ~30 detik) dan candle 4h didekati dari agregasi candle 1h karena Yahoo tidak punya interval 4h asli; jika gagal dimuat karena CORS, coba lagi atau host sendiri lewat proxy. Candle mingguan di biquote dihitung dari candle harian. Marker pola candle hanya untuk candle yang sudah tutup: biru muda = bullish, merah muda = bearish, abu-abu = netral. Di tabel: Candle Run = candle yang sedang berjalan, Candle Cls = candle sebelumnya yang sudah tutup (hijau bullish, merah bearish, oranye netral). Bukan saran investasi.</div>
+  <div class="note">biquote mengambil harga dari feed MetaTrader 5 sebuah broker, jadi bisa sedikit berbeda dari TradingView. Simbol berlaku untuk biquote dan Twelve Data; Binance selalu PAXG/USDT (token emas). Yahoo Finance dipakai untuk saham Indonesia/IHSG (kode pakai akhiran .JK, mis. BBCA.JK, atau ^JKSE untuk indeks) maupun saham/indeks global lain — tanpa API key, tapi tanpa live tick/WebSocket (refresh tiap ~30 detik) dan candle 4h didekati dari agregasi candle 1h karena Yahoo tidak punya interval 4h asli. Stooq adalah alternatif saham Indonesia kalau Yahoo gagal/diblokir jaringan — gratis tanpa API key, tapi HANYA data harian (timeframe 1d). Kedua sumber ini mencoba lewat beberapa proxy CORS otomatis dengan timeout 8 detik per percobaan; kalau tetap gagal semua kemungkinan jaringan/ISP memblokir domain-domain tersebut. Candle mingguan di biquote dihitung dari candle harian. Marker pola candle hanya untuk candle yang sudah tutup: biru muda = bullish, merah muda = bearish, abu-abu = netral. Di tabel: Candle Run = candle yang sedang berjalan, Candle Cls = candle sebelumnya yang sudah tutup (hijau bullish, merah bearish, oranye netral). Bukan saran investasi.</div>
 </div>
 <aside class="side" id="side">
     <div class="tbox" id="boxMtf"><h3>Multi Timeframe</h3><div id="mtf"></div></div>
@@ -267,8 +269,8 @@ const IDX_LIST=[
     g[1].forEach(it=>{ const o=document.createElement('option'); o.textContent=it[0]; o.value=it[1][0]; o.dataset.c=it[1].join(','); og.appendChild(o); });
     sel.appendChild(og);
   });
-  const ogI=document.createElement('optgroup'); ogI.label='Saham Indonesia / IHSG (via Yahoo Finance)';
-  IDX_LIST.forEach(([label,code])=>{ const o=document.createElement('option'); o.textContent=label; o.value=code; o.dataset.src='yahoo'; ogI.appendChild(o); });
+  const ogI=document.createElement('optgroup'); ogI.label='Saham Indonesia / IHSG (Yahoo Finance / Stooq)';
+  IDX_LIST.forEach(([label,code])=>{ const o=document.createElement('option'); o.textContent=label; o.value=code; o.dataset.src='idx'; ogI.appendChild(o); });
   sel.appendChild(ogI);
   const oc=document.createElement('option'); oc.value='__custom'; oc.textContent='Ketik sendiri...'; sel.appendChild(oc);
   sel.value='XAUUSD';
@@ -277,11 +279,11 @@ let prevSym='XAUUSD';
 function onSymChange(){
   const sel=$('sym');
   if(sel.value==='__custom'){
-    const isY=$('src').value==='yahoo';
-    const v=(prompt(isY?'Ketik simbol Yahoo Finance, contoh: BBCA.JK (saham IDX) atau ^JKSE (indeks IHSG)':'Ketik simbol biquote, contoh: EURUSD atau US30')||'').toUpperCase().replace(isY?/[^A-Z0-9.\^]/g:/[^A-Z0-9]/g,'');
+    const srcV=$('src').value, isY=srcV==='yahoo'||srcV==='stooq';
+    const v=(prompt(isY?'Ketik simbol saham, contoh: BBCA.JK (saham IDX) atau ^JKSE (indeks IHSG, khusus Yahoo)':'Ketik simbol biquote, contoh: EURUSD atau US30')||'').toUpperCase().replace(isY?/[^A-Z0-9.\^]/g:/[^A-Z0-9]/g,'');
     if(!v){ sel.value=prevSym; return false; }
     let o=[...sel.options].find(x=>x.value===v);
-    if(!o){ o=document.createElement('option'); o.value=v; o.textContent=v+' (kustom)'; if(isY) o.dataset.src='yahoo'; sel.insertBefore(o,sel.lastChild); }
+    if(!o){ o=document.createElement('option'); o.value=v; o.textContent=v+' (kustom)'; if(isY) o.dataset.src='idx'; sel.insertBefore(o,sel.lastChild); }
     sel.value=v;
   }
   prevSym=sel.value; return true;
@@ -294,7 +296,7 @@ async function checkSymbols(){
     const names=new Set(arr.map(x=>String(x.name||x.symbol||x).toUpperCase()));
     if(names.size<20) return;
     [...$('sym').options].forEach(o=>{
-      if(!o.dataset||!o.dataset.c||o.dataset.src==='yahoo') return;
+      if(!o.dataset||!o.dataset.c||o.dataset.src==='idx') return;
       const hit=o.dataset.c.split(',').find(c=>names.has(c));
       if(hit) o.value=hit; else { o.disabled=true; if(!/tidak tersedia/.test(o.textContent)) o.textContent+=' (tidak tersedia)'; }
     });
@@ -1094,7 +1096,8 @@ async function fetchBinance(tf,limit){
 }
 const sym=()=>{
   const v=($('sym').value||'XAUUSD').toUpperCase();
-  return $('src').value==='yahoo' ? v.replace(/[^A-Z0-9.\^]/g,'') : v.replace(/[^A-Z0-9]/g,'');
+  const srcV=$('src').value;
+  return (srcV==='yahoo'||srcV==='stooq') ? v.replace(/[^A-Z0-9.\^]/g,'') : v.replace(/[^A-Z0-9]/g,'');
 };
 async function fetchBiquote(s,tf,limit){
   const wk=tf==='1w';
@@ -1126,28 +1129,35 @@ async function fetchTwelve(tf,key,s){
     return {time:Math.floor(Date.parse(s+'Z')/1000),open:+v.open,high:+v.high,low:+v.low,close:+v.close};
   });
 }
-const YF_IV={'1m':['1m','5d'],'5m':['5m','1mo'],'15m':['15m','1mo'],'30m':['30m','3mo'],'1h':['60m','6mo'],'4h':['60m','1y'],'1d':['1d','5y']};
 function fetchTO(url,ms){
   const ac=new AbortController(), timer=setTimeout(()=>ac.abort(),ms);
   return fetch(url,{signal:ac.signal}).finally(()=>clearTimeout(timer));
 }
+// Coba akses langsung dulu, lalu beberapa proxy CORS publik sebagai cadangan; tiap percobaan dibatasi waktu
+// supaya tidak menggantung selamanya kalau satu server/proxy tidak merespons (mis. diblokir jaringan/ISP).
+async function fetchRaw(base,ms){
+  const px=(document.getElementById('pxy').value||'').trim().replace(/\/+$/,'');
+  const urls=[]; if(px) urls.push(px+(px.includes('?')?'&':'?')+'url='+encodeURIComponent(base));
+  urls.push(base,'https://api.allorigins.win/raw?url='+encodeURIComponent(base),'https://corsproxy.io/?url='+encodeURIComponent(base),'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(base));
+  let err;
+  for(const u of urls){
+    try{
+      const r=await fetchTO(u,ms); if(!r.ok) throw new Error('HTTP '+r.status);
+      return await r.text();
+    }catch(e){ err=e.name==='AbortError'?new Error('timeout '+(ms/1000)+'dtk'):e; }
+  }
+  throw new Error('semua jalur dicoba ('+(err&&err.message||'tidak diketahui')+')');
+}
+const YF_IV={'1m':['1m','5d'],'5m':['5m','1mo'],'15m':['15m','1mo'],'30m':['30m','3mo'],'1h':['60m','6mo'],'4h':['60m','1y'],'1d':['1d','5y']};
 async function fetchYahoo(s,tf,limit){
   const [iv,range]=YF_IV[tf]||['1d','5y'];
   const base=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?interval=${iv}&range=${range}`;
-  // Yahoo tidak selalu kirim header CORS untuk browser; coba langsung, lalu via proxy CORS publik sebagai cadangan.
-  // Tiap percobaan dibatasi waktu (timeout) supaya tidak menggantung selamanya kalau server/proxy tidak merespons.
-  const urls=[base,'https://api.allorigins.win/raw?url='+encodeURIComponent(base),'https://corsproxy.io/?url='+encodeURIComponent(base),'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(base)];
-  let j=null, err;
-  for(const u of urls){
-    try{
-      const r=await fetchTO(u,8000); if(!r.ok) throw new Error('HTTP '+r.status);
-      const jj=await r.json();
-      if(jj.chart&&jj.chart.error) throw new Error(jj.chart.error.description||'Yahoo error');
-      if(!jj.chart||!jj.chart.result||!jj.chart.result[0]) throw new Error('Data kosong / simbol tidak ditemukan');
-      j=jj; break;
-    }catch(e){ err=e.name==='AbortError'?new Error('timeout 8 detik'):e; }
-  }
-  if(!j) throw new Error('Yahoo Finance gagal, semua jalur dicoba ('+(err&&err.message||'tidak diketahui')+')');
+  let j;
+  try{
+    const txt=await fetchRaw(base,8000); j=JSON.parse(txt);
+    if(j.chart&&j.chart.error) throw new Error(j.chart.error.description||'Yahoo error');
+    if(!j.chart||!j.chart.result||!j.chart.result[0]) throw new Error('Data kosong / simbol tidak ditemukan');
+  }catch(e){ throw new Error('Yahoo Finance gagal, '+e.message); }
   const res=j.chart.result[0], ts=res.timestamp||[], q=(res.indicators.quote||[])[0]||{};
   let d=ts.map((t,i)=>({time:t,open:+q.open[i],high:+q.high[i],low:+q.low[i],close:+q.close[i]}))
     .filter(x=>x.open>0&&x.high>0&&x.low>0&&x.close>0);
@@ -1163,6 +1173,23 @@ async function fetchYahoo(s,tf,limit){
   d=d.slice(-limit);
   if(!d.length) throw new Error('Yahoo Finance: data kosong untuk '+s);
   return d;
+}
+function parseStooqCSV(txt){
+  const lines=txt.trim().split(/\r?\n/);
+  if(!lines.length||!/^date/i.test(lines[0])) return [];
+  return lines.slice(1).map(l=>l.split(',')).filter(r=>r.length>=5&&r[1]&&r[1]!=='N/D')
+    .map(r=>({time:Math.floor(Date.parse(r[0]+'T00:00:00Z')/1000),open:+r[1],high:+r[2],low:+r[3],close:+r[4]}))
+    .filter(x=>isFinite(x.time)&&isFinite(x.close)&&x.close>0);
+}
+async function fetchStooq(s,tf,limit){
+  if(tf!=='1d') throw new Error('Stooq hanya menyediakan data HARIAN gratis untuk saham Indonesia — pilih timeframe 1d');
+  const base=`https://stooq.com/q/d/l/?s=${encodeURIComponent(s.toLowerCase())}&i=d`;
+  let txt;
+  try{ txt=await fetchRaw(base,8000); }catch(e){ throw new Error('Stooq gagal, '+e.message); }
+  if(/exceeded/i.test(txt)) throw new Error('Stooq: limit permintaan harian terlampaui, coba lagi nanti');
+  const d=parseStooqCSV(txt).sort((a,b)=>a.time-b.time);
+  if(!d.length) throw new Error('Stooq: data kosong / simbol tidak ditemukan untuk '+s+' (pastikan formatnya mis. BBCA.JK)');
+  return d.slice(-limit);
 }
 // data acak HANYA untuk mengetes tampilan chart, bukan harga asli
 function demoData(tf){
@@ -1317,11 +1344,12 @@ async function loadData(){
     $('ttl').textContent=src==='binance'?'PAXG/USDT':s;
     ensureWs();
     if(src==='twelve'&&!$('key').value) throw new Error('Isi API key Twelve Data dulu');
-    try{localStorage.setItem('xau_key',$('key').value);}catch(e){}
+    try{localStorage.setItem('xau_key',$('key').value); localStorage.setItem('xau_pxy',$('pxy').value);}catch(e){}
     let d, mtf=null, demo=false, why='';
     try{
       if(src==='twelve') d=await fetchTwelve(tf,$('key').value,s);
       else if(src==='yahoo') d=await fetchYahoo(s,tf,1000);
+      else if(src==='stooq') d=await fetchStooq(s,tf,1000);
       else {
         const get=(t,l)=>src==='binance'?fetchBinance(t,l):fetchBiquote(s,t,l);
         d=await get(tf,1000);
@@ -1396,7 +1424,7 @@ function openBiquoteWs(s,key){
 }
 function ensureWs(){
   const src=$('src').value, s=sym();
-  if(src==='twelve'||src==='yahoo'){ stopWs(); $('ws').textContent=''; wsOk=false; return; }
+  if(src==='twelve'||src==='yahoo'||src==='stooq'){ stopWs(); $('ws').textContent=''; wsOk=false; return; }
   const key=src+':'+(src==='binance'?'PAXG':s);
   if(key===wsKey) return;
   stopWs(); wsKey=key; setWs(false,'○ menyambung...');
@@ -1407,7 +1435,7 @@ const LIVE_MS=200;
 let liveSeq=0, liveApplied=0, liveInflight=0;
 async function liveTick(){
   const src=$('src').value;
-  if(wsOk||liveInflight>=4||!cache||cache.demo||src==='twelve'||src==='yahoo'||document.hidden) return;
+  if(wsOk||liveInflight>=4||!cache||cache.demo||src==='twelve'||src==='yahoo'||src==='stooq'||document.hidden) return;
   const my=++liveSeq; liveInflight++;
   try{
     let p;
@@ -1445,7 +1473,7 @@ checkSymbols();
 if(window.innerWidth<1200) $('cfg').classList.add('hide');
 $('sideBtn').onclick=()=>{ $('side').classList.toggle('hide'); setTimeout(placeCd,300); };
 $('cfgBtn').onclick=()=>{ $('cfg').classList.toggle('hide'); setTimeout(placeCd,300); };
-try{ $('key').value=localStorage.getItem('xau_key')||''; }catch(e){}
+try{ $('key').value=localStorage.getItem('xau_key')||''; $('pxy').value=localStorage.getItem('xau_pxy')||'https://workerchart.hujatulatif-7.workers.dev'; }catch(e){}
 loadData();
 setInterval(tickCd,1000);
 let tick=0;
