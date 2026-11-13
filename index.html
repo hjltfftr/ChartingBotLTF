@@ -64,6 +64,7 @@
       <option value="biquote">biquote (gratis, tanpa key, forex + emas spot)</option>
       <option value="binance">Binance PAXG/USDT (tanpa API key)</option>
       <option value="twelve">Twelve Data XAU/USD (API key gratis)</option>
+      <option value="yahoo">Yahoo Finance (saham Indonesia/IDX &amp; global, tanpa API key)</option>
     </select>
   </label>
   <label>Simbol <select id="sym" style="max-width:220px"></select></label>
@@ -127,10 +128,20 @@
     <label>Len <input id="ml" type="number" value="5"></label>
     <select id="mt"><option>SMA</option><option>EMA</option></select>
   </fieldset>
+  <fieldset><legend>MA Multi (3/5/10/20/50/100/200)</legend>
+    <label>Tipe <select id="mmt"><option>SMA</option><option>EMA</option></select></label>
+    <label><input id="mm3" type="checkbox" checked> <span style="color:#ff4081">MA3</span></label>
+    <label><input id="mm5" type="checkbox" checked> <span style="color:#ff9800">MA5</span></label>
+    <label><input id="mm10" type="checkbox" checked> <span style="color:#ffeb3b">MA10</span></label>
+    <label><input id="mm20" type="checkbox" checked> <span style="color:#4caf50">MA20</span></label>
+    <label><input id="mm50" type="checkbox"> <span style="color:#00bcd4">MA50</span></label>
+    <label><input id="mm100" type="checkbox"> <span style="color:#9c27b0">MA100</span></label>
+    <label><input id="mm200" type="checkbox"> <span style="color:#ffffff">MA200</span></label>
+  </fieldset>
   <fieldset><legend>Supertrend</legend>
     <label><input id="stOn" type="checkbox" checked> Tampil</label>
-    <label>Faktor <input id="sf" type="number" step="0.1" value="3"></label>
-    <label>ATR <input id="sp" type="number" value="10"></label>
+    <label>Faktor <input id="sf" type="number" step="0.1" value="2"></label>
+    <label>ATR <input id="sp" type="number" value="1"></label>
   </fieldset>
   <fieldset><legend>Deteksi candle</legend>
     <label><input id="cdOn" type="checkbox" checked> Baris di tabel</label>
@@ -200,7 +211,7 @@
 <div class="charts">
   <div class="pane"><div class="tag" id="t0">Harga</div><div id="main"></div><canvas id="hpc"></canvas><div id="cd"></div></div>
   <div class="pane"><div class="tag" id="t1">HARSI</div><div id="harsi"></div></div>
-  <div class="note">biquote mengambil harga dari feed MetaTrader 5 sebuah broker, jadi bisa sedikit berbeda dari TradingView. Simbol berlaku untuk biquote dan Twelve Data; Binance selalu PAXG/USDT (token emas). Candle mingguan di biquote dihitung dari candle harian. Marker pola candle hanya untuk candle yang sudah tutup: biru muda = bullish, merah muda = bearish, abu-abu = netral. Di tabel: Candle Run = candle yang sedang berjalan, Candle Cls = candle sebelumnya yang sudah tutup (hijau bullish, merah bearish, oranye netral). Bukan saran investasi.</div>
+  <div class="note">biquote mengambil harga dari feed MetaTrader 5 sebuah broker, jadi bisa sedikit berbeda dari TradingView. Simbol berlaku untuk biquote dan Twelve Data; Binance selalu PAXG/USDT (token emas). Yahoo Finance dipakai untuk saham Indonesia/IHSG (kode pakai akhiran .JK, mis. BBCA.JK, atau ^JKSE untuk indeks) maupun saham/indeks global lain — tanpa API key, tapi tanpa live tick/WebSocket (refresh tiap ~30 detik) dan candle 4h didekati dari agregasi candle 1h karena Yahoo tidak punya interval 4h asli; jika gagal dimuat karena CORS, coba lagi atau host sendiri lewat proxy. Candle mingguan di biquote dihitung dari candle harian. Marker pola candle hanya untuk candle yang sudah tutup: biru muda = bullish, merah muda = bearish, abu-abu = netral. Di tabel: Candle Run = candle yang sedang berjalan, Candle Cls = candle sebelumnya yang sudah tutup (hijau bullish, merah bearish, oranye netral). Bukan saran investasi.</div>
 </div>
 <aside class="side" id="side">
     <div class="tbox" id="boxMtf"><h3>Multi Timeframe</h3><div id="mtf"></div></div>
@@ -232,6 +243,23 @@ const SYM_GROUPS=[
  ['Saham Eropa & Inggris',[A('VOW (Volkswagen)','VOW','VOW3','VOWG'),A('BARC (Barclays)','BARC'),A('BMW','BMW','BMWG'),A('LVMH','LVMH','MC'),A('BP','BP'),A('RDSA (Shell)','RDSA','SHEL','SHELL')]],
  ['Obligasi',[A('Euro Bund','BUND','EUBUND','GER10YR'),A('US 10-year Treasury Note','US10Y','USTBOND','TNOTE','ZN'),A('UK Gilt','UKGILT','GILT')]]
 ];
+const IDX_LIST=[
+  ['IHSG (indeks)','^JKSE'],['BBCA (Bank Central Asia)','BBCA.JK'],['BBRI (Bank Rakyat Indonesia)','BBRI.JK'],
+  ['BMRI (Bank Mandiri)','BMRI.JK'],['BBNI (Bank Negara Indonesia)','BBNI.JK'],['BRIS (Bank Syariah Indonesia)','BRIS.JK'],
+  ['TLKM (Telkom Indonesia)','TLKM.JK'],['ASII (Astra International)','ASII.JK'],['UNVR (Unilever Indonesia)','UNVR.JK'],
+  ['ICBP (Indofood CBP)','ICBP.JK'],['INDF (Indofood Sukses Makmur)','INDF.JK'],['ANTM (Aneka Tambang)','ANTM.JK'],
+  ['ADRO (Adaro Energy)','ADRO.JK'],['PGAS (Perusahaan Gas Negara)','PGAS.JK'],['PTBA (Bukit Asam)','PTBA.JK'],
+  ['UNTR (United Tractors)','UNTR.JK'],['SMGR (Semen Indonesia)','SMGR.JK'],['INTP (Indocement)','INTP.JK'],
+  ['KLBF (Kalbe Farma)','KLBF.JK'],['SIDO (Sido Muncul)','SIDO.JK'],['CPIN (Charoen Pokphand)','CPIN.JK'],
+  ['JPFA (Japfa)','JPFA.JK'],['GOTO (GoTo Gojek Tokopedia)','GOTO.JK'],['BUKA (Bukalapak)','BUKA.JK'],
+  ['EMTK (Elang Mahkota Teknologi)','EMTK.JK'],['MDKA (Merdeka Copper Gold)','MDKA.JK'],['INCO (Vale Indonesia)','INCO.JK'],
+  ['AMRT (Sumber Alfaria/Alfamart)','AMRT.JK'],['MAPI (Mitra Adiperkasa)','MAPI.JK'],['ACES (Ace Hardware)','ACES.JK'],
+  ['EXCL (XL Axiata)','EXCL.JK'],['ISAT (Indosat Ooredoo)','ISAT.JK'],['TOWR (Sarana Menara Nusantara)','TOWR.JK'],
+  ['TPIA (Chandra Asri)','TPIA.JK'],['BRPT (Barito Pacific)','BRPT.JK'],['ITMG (Indo Tambangraya Megah)','ITMG.JK'],
+  ['MEDC (Medco Energi)','MEDC.JK'],['AKRA (AKR Corporindo)','AKRA.JK'],['WIKA (Wijaya Karya)','WIKA.JK'],
+  ['WSKT (Waskita Karya)','WSKT.JK'],['PWON (Pakuwon Jati)','PWON.JK'],['CTRA (Ciputra Development)','CTRA.JK'],
+  ['SMRA (Summarecon Agung)','SMRA.JK'],['ERAA (Erajaya Swasembada)','ERAA.JK'],['HRUM (Harum Energy)','HRUM.JK']
+];
 (function(){
   const sel=$('sym');
   SYM_GROUPS.forEach(g=>{
@@ -239,6 +267,9 @@ const SYM_GROUPS=[
     g[1].forEach(it=>{ const o=document.createElement('option'); o.textContent=it[0]; o.value=it[1][0]; o.dataset.c=it[1].join(','); og.appendChild(o); });
     sel.appendChild(og);
   });
+  const ogI=document.createElement('optgroup'); ogI.label='Saham Indonesia / IHSG (via Yahoo Finance)';
+  IDX_LIST.forEach(([label,code])=>{ const o=document.createElement('option'); o.textContent=label; o.value=code; o.dataset.src='yahoo'; ogI.appendChild(o); });
+  sel.appendChild(ogI);
   const oc=document.createElement('option'); oc.value='__custom'; oc.textContent='Ketik sendiri...'; sel.appendChild(oc);
   sel.value='XAUUSD';
 })();
@@ -246,10 +277,11 @@ let prevSym='XAUUSD';
 function onSymChange(){
   const sel=$('sym');
   if(sel.value==='__custom'){
-    const v=(prompt('Ketik simbol biquote, contoh: EURUSD atau US30')||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const isY=$('src').value==='yahoo';
+    const v=(prompt(isY?'Ketik simbol Yahoo Finance, contoh: BBCA.JK (saham IDX) atau ^JKSE (indeks IHSG)':'Ketik simbol biquote, contoh: EURUSD atau US30')||'').toUpperCase().replace(isY?/[^A-Z0-9.\^]/g:/[^A-Z0-9]/g,'');
     if(!v){ sel.value=prevSym; return false; }
     let o=[...sel.options].find(x=>x.value===v);
-    if(!o){ o=document.createElement('option'); o.value=v; o.textContent=v+' (kustom)'; sel.insertBefore(o,sel.lastChild); }
+    if(!o){ o=document.createElement('option'); o.value=v; o.textContent=v+' (kustom)'; if(isY) o.dataset.src='yahoo'; sel.insertBefore(o,sel.lastChild); }
     sel.value=v;
   }
   prevSym=sel.value; return true;
@@ -262,7 +294,7 @@ async function checkSymbols(){
     const names=new Set(arr.map(x=>String(x.name||x.symbol||x).toUpperCase()));
     if(names.size<20) return;
     [...$('sym').options].forEach(o=>{
-      if(!o.dataset||!o.dataset.c) return;
+      if(!o.dataset||!o.dataset.c||o.dataset.src==='yahoo') return;
       const hit=o.dataset.c.split(',').find(c=>names.has(c));
       if(hit) o.value=hit; else { o.disabled=true; if(!/tidak tersedia/.test(o.textContent)) o.textContent+=' (tidak tersedia)'; }
     });
@@ -281,6 +313,9 @@ const cH    = LightweightCharts.createChart($('harsi'), opts());
 const candle = cMain.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
 const ln=(c,color,w)=>c.addLineSeries({color,lineWidth:w||1,priceLineVisible:false,lastValueVisible:false});
 const bbM=ln(cMain,'#ff9800',1), bbU=ln(cMain,'#2196f3',1), bbL=ln(cMain,'#2196f3',1), maS=ln(cMain,'#ffeb3b',2);
+const MM_PERIODS=[3,5,10,20,50,100,200];
+const MM_COLORS={3:'#ff4081',5:'#ff9800',10:'#ffeb3b',20:'#4caf50',50:'#00bcd4',100:'#9c27b0',200:'#ffffff'};
+const mmS={}; MM_PERIODS.forEach(p=>{ mmS[p]=ln(cMain,MM_COLORS[p],p>=50?2:1); });
 const hHist=cH.addHistogramSeries({color:'rgba(192,192,192,0.22)',priceLineVisible:false,lastValueVisible:false});
 const hCand=cH.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#787b86',wickDownColor:'#787b86',priceLineVisible:false,lastValueVisible:false,
   autoscaleInfoProvider:()=>({priceRange:{minValue:-55,maxValue:55}})});
@@ -305,7 +340,9 @@ charts.forEach(c=>c.timeScale().subscribeVisibleLogicalRangeChange(r=>{
 // ---------- indikator ----------
 const N=id=>+$(id).value, K=id=>$(id).checked;
 const cfg=()=>({utOn:K('utOn'),ua:N('ua'),uc:N('uc'),ha:K('ha'),sr:N('sr'),sl:N('sl'),sk:N('sk'),sd:N('sd'),rl:N('rl'),
-  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),hpOn:K('hpOn'),hpTb:K('hpTb'),hpOld:K('hpOld'),hpEm:K('hpEm'),hpAh:K('hpAh'),hpSoft:K('hpSoft'),hpRatio:K('hpRatio'),hpLine:K('hpLine'),hpBox:K('hpBox'),hpFill:K('hpFill'),hpRN:K('hpRN'),hpTrade:K('hpTrade'),hpTN:Math.max(0,N('hpTN')),hpTC:K('hpTC'),hpTA:K('hpTA'),hpFib:(()=>{const a=(($('hpFib').value||'').split(/[,; ]+/).map(Number).filter(v=>v>0&&isFinite(v)).sort((x,y)=>x-y).filter((v,i,r)=>!i||v!==r[i-1]).slice(0,6));return a.length?a:[0.382,0.618];})(),
+  bbOn:K('bbOn'),bl:N('bl'),bm:N('bm'),maOn:K('maOn'),ml:N('ml'),mt:$('mt').value,
+  mmt:$('mmt').value,mm:{3:K('mm3'),5:K('mm5'),10:K('mm10'),20:K('mm20'),50:K('mm50'),100:K('mm100'),200:K('mm200')},
+  stOn:K('stOn'),sf:N('sf'),sp:N('sp'),tbOn:K('tbOn'),hpOn:K('hpOn'),hpTb:K('hpTb'),hpOld:K('hpOld'),hpEm:K('hpEm'),hpAh:K('hpAh'),hpSoft:K('hpSoft'),hpRatio:K('hpRatio'),hpLine:K('hpLine'),hpBox:K('hpBox'),hpFill:K('hpFill'),hpRN:K('hpRN'),hpTrade:K('hpTrade'),hpTN:Math.max(0,N('hpTN')),hpTC:K('hpTC'),hpTA:K('hpTA'),hpFib:(()=>{const a=(($('hpFib').value||'').split(/[,; ]+/).map(Number).filter(v=>v>0&&isFinite(v)).sort((x,y)=>x-y).filter((v,i,r)=>!i||v!==r[i-1]).slice(0,6));return a.length?a:[0.382,0.618];})(),
   hpZm:N('hpZm'),hpZp:N('hpZp'),hpZmax:N('hpZmax'),hpZmin:N('hpZmin'),hpZrt:K('hpZrt'),hpSlR:N('hpSlR'),hpSlU:N('hpSlU'),hpPur:K('hpPur'),hpLeg:K('hpLeg'),hpDd:K('hpDd'),
   hpMaxC:Math.max(1,N('hpMaxC')),hpMaxE:Math.max(1,N('hpMaxE')),hpExt:Math.max(5,N('hpExt')),hpPat:[0,1,2,3,4,5,6,7].map(i=>K('hpP'+i)),
   srOn:K('srOn'),srN:Math.max(1,N('srN')),srPv:Math.max(2,N('srPv')),srMin:Math.max(1,N('srMin')),srTol:N('srTol'),cdOn:K('cdOn'),cdAll:K('cdAll'),mkOn:K('mkOn'),tbT:K('tbT'),cpTr:K('cpTr'),cpEma:Math.max(2,N('cpEma')),cpDoji:N('cpDoji')/100,cpSmall:N('cpSmall')/100,cpLong:N('cpLong'),cpShadow:N('cpShadow'),cpTol:N('cpTol')/100,
@@ -1055,7 +1092,10 @@ async function fetchBinance(tf,limit){
   }
   throw new Error('Semua server Binance gagal ('+err.message+')');
 }
-const sym=()=>($('sym').value||'XAUUSD').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const sym=()=>{
+  const v=($('sym').value||'XAUUSD').toUpperCase();
+  return $('src').value==='yahoo' ? v.replace(/[^A-Z0-9.\^]/g,'') : v.replace(/[^A-Z0-9]/g,'');
+};
 async function fetchBiquote(s,tf,limit){
   const wk=tf==='1w';
   const r=await fetch(`https://biquote.io/api/${s}/ohlc?interval=${wk?'1d':tf}&limit=${wk?1000:limit}`);
@@ -1085,6 +1125,44 @@ async function fetchTwelve(tf,key,s){
     const s=v.datetime.length===10?v.datetime+'T00:00:00':v.datetime.replace(' ','T');
     return {time:Math.floor(Date.parse(s+'Z')/1000),open:+v.open,high:+v.high,low:+v.low,close:+v.close};
   });
+}
+const YF_IV={'1m':['1m','5d'],'5m':['5m','1mo'],'15m':['15m','1mo'],'30m':['30m','3mo'],'1h':['60m','6mo'],'4h':['60m','1y'],'1d':['1d','5y']};
+function fetchTO(url,ms){
+  const ac=new AbortController(), timer=setTimeout(()=>ac.abort(),ms);
+  return fetch(url,{signal:ac.signal}).finally(()=>clearTimeout(timer));
+}
+async function fetchYahoo(s,tf,limit){
+  const [iv,range]=YF_IV[tf]||['1d','5y'];
+  const base=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?interval=${iv}&range=${range}`;
+  // Yahoo tidak selalu kirim header CORS untuk browser; coba langsung, lalu via proxy CORS publik sebagai cadangan.
+  // Tiap percobaan dibatasi waktu (timeout) supaya tidak menggantung selamanya kalau server/proxy tidak merespons.
+  const urls=[base,'https://api.allorigins.win/raw?url='+encodeURIComponent(base),'https://corsproxy.io/?url='+encodeURIComponent(base),'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(base)];
+  let j=null, err;
+  for(const u of urls){
+    try{
+      const r=await fetchTO(u,8000); if(!r.ok) throw new Error('HTTP '+r.status);
+      const jj=await r.json();
+      if(jj.chart&&jj.chart.error) throw new Error(jj.chart.error.description||'Yahoo error');
+      if(!jj.chart||!jj.chart.result||!jj.chart.result[0]) throw new Error('Data kosong / simbol tidak ditemukan');
+      j=jj; break;
+    }catch(e){ err=e.name==='AbortError'?new Error('timeout 8 detik'):e; }
+  }
+  if(!j) throw new Error('Yahoo Finance gagal, semua jalur dicoba ('+(err&&err.message||'tidak diketahui')+')');
+  const res=j.chart.result[0], ts=res.timestamp||[], q=(res.indicators.quote||[])[0]||{};
+  let d=ts.map((t,i)=>({time:t,open:+q.open[i],high:+q.high[i],low:+q.low[i],close:+q.close[i]}))
+    .filter(x=>x.open>0&&x.high>0&&x.low>0&&x.close>0);
+  if(tf==='4h'){
+    const g=[];
+    d.forEach(x=>{
+      const start=Math.floor(x.time/14400)*14400, l=g[g.length-1];
+      if(l&&l.time===start){ l.high=Math.max(l.high,x.high); l.low=Math.min(l.low,x.low); l.close=x.close; }
+      else g.push({time:start,open:x.open,high:x.high,low:x.low,close:x.close});
+    });
+    d=g;
+  }
+  d=d.slice(-limit);
+  if(!d.length) throw new Error('Yahoo Finance: data kosong untuk '+s);
+  return d;
 }
 // data acak HANYA untuk mengetes tampilan chart, bukan harga asli
 function demoData(tf){
@@ -1155,6 +1233,11 @@ function render(live){
     [bbM,bbU,bbL].forEach(s=>s.applyOptions({visible:S.bbOn}));
     maS.setData(toSeries(t,S.mt==='SMA'?sma(c,S.ml):ema(c,S.ml)));
     maS.applyOptions({visible:S.maOn});
+    MM_PERIODS.forEach(p=>{
+      const show=S.mm[p];
+      if(show) mmS[p].setData(toSeries(t,S.mmt==='SMA'?sma(c,p):ema(c,p)));
+      mmS[p].applyOptions({visible:show});
+    });
 
     // ---- HARSI (port dari Pine "Heikin Ashi RSI Oscillator") ----
     const n=d.length, hi=d.map(x=>x.high), lo=d.map(x=>x.low), o4=d.map(x=>(x.open+x.high+x.low+x.close)/4);
@@ -1238,6 +1321,7 @@ async function loadData(){
     let d, mtf=null, demo=false, why='';
     try{
       if(src==='twelve') d=await fetchTwelve(tf,$('key').value,s);
+      else if(src==='yahoo') d=await fetchYahoo(s,tf,1000);
       else {
         const get=(t,l)=>src==='binance'?fetchBinance(t,l):fetchBiquote(s,t,l);
         d=await get(tf,1000);
@@ -1312,7 +1396,7 @@ function openBiquoteWs(s,key){
 }
 function ensureWs(){
   const src=$('src').value, s=sym();
-  if(src==='twelve'){ stopWs(); $('ws').textContent=''; wsOk=false; return; }
+  if(src==='twelve'||src==='yahoo'){ stopWs(); $('ws').textContent=''; wsOk=false; return; }
   const key=src+':'+(src==='binance'?'PAXG':s);
   if(key===wsKey) return;
   stopWs(); wsKey=key; setWs(false,'○ menyambung...');
@@ -1323,7 +1407,7 @@ const LIVE_MS=200;
 let liveSeq=0, liveApplied=0, liveInflight=0;
 async function liveTick(){
   const src=$('src').value;
-  if(wsOk||liveInflight>=4||!cache||cache.demo||src==='twelve'||document.hidden) return;
+  if(wsOk||liveInflight>=4||!cache||cache.demo||src==='twelve'||src==='yahoo'||document.hidden) return;
   const my=++liveSeq; liveInflight++;
   try{
     let p;
